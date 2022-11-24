@@ -1,0 +1,41 @@
+ 
+ 
+ - name: Deploy Cecil
+   hosts: '{{ HOSTSCOPE }}'
+  # hosts: '{{ HOSTSCOPE }}'
+   become: yes
+
+   tasks:
+
+   - name: Create Cecil Directory
+     ansible.builtin.file:
+       path: /home/{{ USERNAME }}/cecil
+       state: directory
+       mode: '0755'
+
+   - name: Copy Linux Health Folder
+     ansible.builtin.copy:
+       src: /cecil/linux-health/
+       dest: /home/{{ USERNAME }}/cecil/linux-health/
+       owner: '{{ USERNAME }}'
+       group: '{{ USERNAME }}'
+       mode: '0755'
+
+   - name: Copy Docker Monitor Folder
+     ansible.builtin.copy:
+       src: /cecil/monitor-docker/
+       dest: /home/{{ USERNAME }}/cecil/monitor-docker
+       owner: '{{ USERNAME }}'
+       group: '{{ USERNAME }}'
+       mode: '0755'
+
+   - name: Copy Setup Script
+     ansible.builtin.copy:
+       src: /cecil/setup.sh
+       dest: /home/{{ USERNAME }}/cecil/setup.sh
+       owner: '{{ USERNAME }}'
+       group: '{{ USERNAME }}'
+       mode: '0755'
+
+   - name: Run Setup Script
+     ansible.builtin.shell: /home/{{ USERNAME }}/cecil/setup.sh {{ USERNAME }}
