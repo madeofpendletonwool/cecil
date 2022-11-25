@@ -1,0 +1,9 @@
+ - name: Cecil-Linux-Health
+   hosts: '{{ HOSTSCOPE }}'
+  # hosts: '{{ HOSTSCOPE }}'
+   become: yes
+
+   tasks:
+
+   - name: Run Linux Health Check
+     ansible.builtin.shell: /usr/bin/python3 /opt/cecil/linux-health/server-health-check.py {{ REQUEST_URL }}

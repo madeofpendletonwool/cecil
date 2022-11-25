@@ -16,12 +16,4 @@ pip3 install logging-config
 pip3 install os-sys
 pip3 install typing 
 pip3 install docker 
-pip3 install lib-platform 
-
-#echo new cron into cron file
-echo "*/10 * * * * /usr/bin/bash /opt/cecil/monitor-docker/run.sh" > /opt/cecil/TEMP/cecilcron
-echo "0 2 * * * /usr/bin/python3 /opt/cecil/linux-health/server-health-check.py" >> /opt/cecil/TEMP/cecilcron
-#install new cron file
-cp /opt/cecil/TEMP/cecilcron /etc/cron.d
-
-rm /opt/cecil/TEMP/cecilcron
+pip3 install lib-platform

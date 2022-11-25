@@ -1,0 +1,9 @@
+ - name: Cecil-Monitor-Docker
+   hosts: '{{ HOSTSCOPE }}'
+  # hosts: '{{ HOSTSCOPE }}'
+   become: yes
+
+   tasks:
+
+   - name: Run Monitor Docker
+     ansible.builtin.shell: /opt/cecil/monitor-docker/run.sh {{ REQUEST_URL }}

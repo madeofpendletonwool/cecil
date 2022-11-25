@@ -11,3 +11,10 @@ The intention of this program is to very generically handle any kind of reportin
 
 Deployment of any modules is a piece of cake.
 
+First in the environment you want to run any modules in just run the setup.sh script. This will copy the cecil files over to a folder in /opt called 'cecil'. All files will be in there from here on out. It also installs any dependancies that are needed for any modules using pip. From there, follow instructions on any individual module in the documentation below. One thing I will say is that it's pretty handy to set up the running of any of these modules using some sort of CI/CD/automation software. I use github actions. First I deploy cecil using an actions workflow. Create a workflow that pulls the cecil repo and then runs the setup.sh script on all servers you want to run cecil on. From there you just need to run the ansible playbooks on scripted intervals. The docs on each module will go into more details on the playbooks. 
+
+### Docker Monitor
+Docs Coming soon!
+
+### Linux Health
+Docs Coming Soon!
