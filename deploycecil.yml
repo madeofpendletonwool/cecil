@@ -19,10 +19,10 @@
        group: '{{ USERNAME }}'
        mode: '0755'
 
-    - name: Update apt cache and make pip is installed
-      apt:
-        name: python3-pip
-        update_cache: yes
+   - name: Update apt cache and make pip is installed
+     apt:
+       name: python3-pip
+       update_cache: yes
 
    - name: Install configparser python package
      ansible.builtin.pip:
