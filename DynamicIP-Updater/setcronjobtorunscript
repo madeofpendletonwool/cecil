@@ -1,0 +1,4 @@
+ 
+Use sudo crontab -e
+In that file create entry 
+*/5 * * * * /usr/bin/python3 /home/<user>/ntfy/checkpublicip.py

@@ -18,3 +18,6 @@ Docs Coming soon!
 
 ### Linux Health
 Docs Coming Soon!
+
+### Dynamic IP Updater
+Docs Coming Soon!

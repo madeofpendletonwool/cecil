@@ -1,5 +1,3 @@
- 
- 
  - name: Deploy Cecil
    hosts: '{{ HOSTSCOPE }}'
   # hosts: '{{ HOSTSCOPE }}'
@@ -9,33 +7,50 @@
 
    - name: Create Cecil Directory
      ansible.builtin.file:
-       path: /home/{{ USERNAME }}/cecil
+       path: /opt/cecil
        state: directory
        mode: '0755'
 
-   - name: Copy Linux Health Folder
+   - name: Copy Cecil contents to remote server
      ansible.builtin.copy:
-       src: /cecil/linux-health/
-       dest: /home/{{ USERNAME }}/cecil/linux-health/
+       src: /cecil/
+       dest: /opt/cecil/
        owner: '{{ USERNAME }}'
        group: '{{ USERNAME }}'
        mode: '0755'
 
-   - name: Copy Docker Monitor Folder
-     ansible.builtin.copy:
-       src: /cecil/monitor-docker/
-       dest: /home/{{ USERNAME }}/cecil/monitor-docker
-       owner: '{{ USERNAME }}'
-       group: '{{ USERNAME }}'
-       mode: '0755'
+   - name: Install configparser python package
+     ansible.builtin.pip:
+       name: configparser
 
-   - name: Copy Setup Script
-     ansible.builtin.copy:
-       src: /cecil/setup.sh
-       dest: /home/{{ USERNAME }}/cecil/setup.sh
-       owner: '{{ USERNAME }}'
-       group: '{{ USERNAME }}'
-       mode: '0755'
+   - name: Install requests python package
+     ansible.builtin.pip:
+       name: requests
 
-   - name: Run Setup Script
-     ansible.builtin.shell: /home/{{ USERNAME }}/cecil/setup.sh {{ USERNAME }}
+   - name: Install regex python package
+     ansible.builtin.pip:
+       name: regex
+
+   - name: Install psutil python package
+     ansible.builtin.pip:
+       name: psutil
+
+   - name: Install argparse python package
+     ansible.builtin.pip:
+       name: argparse
+
+   - name: Install typing python package
+     ansible.builtin.pip:
+       name: typing
+
+   - name: Install docker python package
+     ansible.builtin.pip:
+       name: docker
+
+   - name: Install lib-platform python package
+     ansible.builtin.pip:
+       name: lib-platform
+
+   - name: Install yaml python package
+     ansible.builtin.pip:
+       name: pyyaml
