@@ -11,6 +11,12 @@
        state: directory
        mode: '0755'
 
+   - name: Create Cecil Temp Directory
+     ansible.builtin.file:
+       path: /opt/cecil
+       state: directory
+       mode: '0755'
+
    - name: Copy Cecil contents to remote server
      ansible.builtin.copy:
        src: /cecil/
