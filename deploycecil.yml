@@ -13,7 +13,7 @@
 
    - name: Create Cecil Temp Directory
      ansible.builtin.file:
-       path: /opt/cecil
+       path: /opt/cecil/TEMP
        state: directory
        mode: '0755'
 
