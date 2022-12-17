@@ -52,4 +52,4 @@ if Current_IP != ip:
     requests.post(ntfytopic, data=f"Public IP Changed! It's now {ip} 😀".encode(encoding='utf-8'))
 
     #Restart Dynu Service
-    os.system("echo orange11 | sudo -S systemctl restart dynuiuc.service")
+    os.system("echo password | sudo -S systemctl restart dynuiuc.service")
