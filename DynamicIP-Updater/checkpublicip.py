@@ -51,5 +51,6 @@ if Current_IP != ip:
     # Post curl Notification
     requests.post(ntfytopic, data=f"Public IP Changed! It's now {ip} 😀".encode(encoding='utf-8'))
 
+    # This last line you could add a task to restart a service on the host machine if needed. I use the dynudns service. So here's the command for that.
     #Restart Dynu Service
-    os.system("echo password | sudo -S systemctl restart dynuiuc.service")
+    # os.system("echo <password> | sudo -S systemctl restart dynuiuc.service")
