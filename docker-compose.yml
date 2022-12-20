@@ -1,0 +1,29 @@
+ 
+version: '3'
+services:
+  camm:
+    image: madeofpendletonwool/cecil:latest
+    container_name: cecil
+    tty: true
+    environment:
+      # Vars to provide access to host machine - Required
+      - HOST_SSH_IP={{ ip }}
+      - HOST_SSH_USER={{ user }}
+      - HOST_SSH_PASS={{ pass }} 
+      # Vars for ntfy urls. You can make both of these the same. However, I use alert url for things that should be reported on right away, and monitor url for things that should be just occacionally viewed.
+      - ALERT_URL={{ https://ntfy.com/alert }}
+      - MONITOR_URL={{ https://ntfy/monitor }}
+      # Vars to decide whether or not you'd like to run all the available monitors. True of False
+      - DOCKER_MONITOR_ACTIVE=true
+      - LINUX_HEALTH_ACTIVE=true
+      - DYNAMIC_IP_UPDATER=true
+      # Vars to set crontimers on how often each scan should run
+      - DOCKER_MONITOR_CRON={{ crontimer }}
+      - LINUX_HEALTH_CRON={{ crontimer }}
+      - DYNAMIC_IP_CRON={{ crontimer }}
+    volumes:
+      # Create a folder on your host machine that you'd like the scan file to go into and then 
+      # mount it here. Leave the second folder alone. The /data part is where the container puts
+      # the scanned data.
+      - /your/data/path/data:/data
+    restart: always
