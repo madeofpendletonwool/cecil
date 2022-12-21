@@ -27,7 +27,11 @@ RUN git clone https://github.com/madeofpendletonwool/cecil.git /opt/cecil && \
     mkdir -p /opt/cecil/TEMP && \
     chmod -R 755 /opt
 # Begin cecil Setup
-ENTRYPOINT [ /bin/bash -c '/usr/bin/bash /opt/cecil/cecilcontained.py \
+ENTRYPOINT   /bin/bash -c "set -f && \
+             DOCKERCRON=$(echo $DOCKER_MONITOR_CRON | xargs) && \
+             LINUXCRON=$(echo $LINUX_HEALTH_CRON | xargs) && \
+             DYNAMICCRON=&(echo $DYNAMIC_IP_CRON | xargs) && \
+             /usr/bin/python3 /opt/cecil/cecilcontained.py \
              --host_ssh_ip=$HOST_SSH_IP \
              --host_ssh_user=$HOST_SSH_USER \
              --host_ssh_pass=$HOST_SSH_PASS \
@@ -36,8 +40,9 @@ ENTRYPOINT [ /bin/bash -c '/usr/bin/bash /opt/cecil/cecilcontained.py \
              --docker_monitor_active=$DOCKER_MONITOR_ACTIVE \
              --linux_health_active=$LINUX_HEALTH_ACTIVE \
              --dynamic_ip_updater=$DYNAMIC_IP_UPDATER \
-             --docker_monitor_cron=$DOCKER_MONITOR_CRON \
-             --linux_health_cron=$LINUX_HEALTH_CRON \
-             --dynamic_ip_cron=$DYNAMIC_IP_CRON \
+             --docker_monitor_cron='$DOCKERCRON' \
+             --linux_health_cron='$LINUXCRON' \
+             --dynamic_ip_cron='$DYNAMICCRON' && \
+             set +f && \
              service cron start && \
-             tail -f /dev/null' ]
+             tail -f '/dev/null'"
