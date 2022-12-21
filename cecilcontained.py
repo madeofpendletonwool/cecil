@@ -48,16 +48,20 @@ output, error = process.communicate()
 #Check if Docker Monitor should run and setup
 if args_passed['docker_monitor_active'] == 'true':
     bashCommand = f"crontab -l 2>/dev/null; echo '{args_passed['docker_monitor_cron']} /usr/bin/bash 'echo /opt/cecil/monitor-docker/run.sh {args_passed['alert_url']} > /opt/cecil/pipe' | crontab -"
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    print(bashCommand)
     output, error = process.communicate()
 
 #Check if Linux Health Scan should run and setup
 if args_passed['linux_health_active'] == 'true':
     bashCommand = f"crontab -l 2>/dev/null; echo '{args_passed['linux_health_cron']} /usr/bin/python3 'echo /opt/cecil/linux-health/server-health-check.py {args_passed['monitor_url']} > /opt/cecil/pipe' | crontab -"
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
 #Check if Dynamic IP Scan should run and setup
 if args_passed['dynamic_ip_updater'] == 'true':
     bashCommand = f"crontab -l 2>/dev/null; echo '{args_passed['dynamic_ip_cron']} /usr/bin/python3 'echo /opt/cecil/DynamicIP-Updater/checkpublicip.py {args_passed['monitor_url']} > /opt/cecil/pipe' | crontab -"
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
 # 
