@@ -28,9 +28,7 @@ RUN git clone https://github.com/madeofpendletonwool/cecil.git /opt/cecil && \
     chmod -R 755 /opt
 # Begin cecil Setup
 ENTRYPOINT   /bin/bash -c "set -f && \
-             DOCKERCRON=$(echo $DOCKER_MONITOR_CRON | xargs) && \
-             LINUXCRON=$(echo $LINUX_HEALTH_CRON | xargs) && \
-             DYNAMICCRON=&(echo $DYNAMIC_IP_CRON | xargs) && \
+             ./createcronvars.sh && \
              /usr/bin/python3 /opt/cecil/cecilcontained.py \
              --host_ssh_ip=$HOST_SSH_IP \
              --host_ssh_user=$HOST_SSH_USER \
