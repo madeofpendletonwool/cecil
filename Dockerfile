@@ -10,14 +10,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Make sure the package repository is up to date. Also install needed packages via apt
 RUN apt update && \
     apt -qy upgrade && \
-    apt install -qy python3 && \
-    apt install -qy git && \
-    apt install -qy software-properties-common && \
-    apt install -qy python3-pip && \
-    apt install -qy curl && \
-    apt install -qy cron && \
-    apt install -qy supervisor && \
-    apt install python3-pip
+    apt -qy upgrade && \
+    apt install -qy python3 git software-properties-common python3-pip curl cron supervisor
 # Install needed python packages via pip
 ADD ./requirements.txt /
 RUN pip install -r ./requirements.txt
@@ -27,8 +21,7 @@ RUN git clone https://github.com/madeofpendletonwool/cecil.git /opt/cecil && \
     mkdir -p /opt/cecil/TEMP && \
     chmod -R 755 /opt
 # Begin cecil Setup
-ENTRYPOINT   /bin/bash -c "set -f && \
-             /opt/cecil/createcronvars.sh && \
+ENTRYPOINT   /bin/bash -c 'set -f && \
              /usr/bin/python3 /opt/cecil/cecilcontained.py \
              --host_ssh_ip=$HOST_SSH_IP \
              --host_ssh_user=$HOST_SSH_USER \
@@ -38,9 +31,9 @@ ENTRYPOINT   /bin/bash -c "set -f && \
              --docker_monitor_active=$DOCKER_MONITOR_ACTIVE \
              --linux_health_active=$LINUX_HEALTH_ACTIVE \
              --dynamic_ip_updater=$DYNAMIC_IP_UPDATER \
-             --docker_monitor_cron='$DOCKERCRON' \
-             --linux_health_cron='$LINUXCRON' \
-             --dynamic_ip_cron='$DYNAMICCRON' && \
+             --docker_monitor_cron="$DOCKER_MONITOR_CRON" \
+             --linux_health_cron="$LINUX_HEALTH_CRON" \
+             --dynamic_ip_cron="$DYNAMIC_IP_CRON" && \
              set +f && \
              service cron start && \
-             tail -f '/dev/null'"
+             tail -f /dev/null'
