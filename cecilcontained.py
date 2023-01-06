@@ -33,6 +33,7 @@ ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect(hostname=args_passed['host_ssh_ip'], username=args_passed['host_ssh_user'], password=args_passed['host_ssh_pass'])
 # Run a command on the remote host
 stdin, stdout, stderr = ssh.exec_command('mkdir -p /opt/cecil && mkfifo /opt/cecil/pipe && while true; do eval "$(cat /opt/cecil/pipe)"; done')
+stdin.close()
 # Wait for the command to complete
 stdout.channel.recv_exit_status()
 # Close the connection
