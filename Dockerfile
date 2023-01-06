@@ -1,4 +1,3 @@
- 
 FROM ubuntu:latest
 
 LABEL maintainer="Collin Pendleton <collinp@collinpendleton.com>"
@@ -21,19 +20,5 @@ RUN git clone https://github.com/madeofpendletonwool/cecil.git /opt/cecil && \
     mkdir -p /opt/cecil/TEMP && \
     chmod -R 755 /opt
 # Begin cecil Setup
-ENTRYPOINT   /bin/bash -c 'set -f && \
-             /usr/bin/python3 /opt/cecil/cecilcontained.py \
-             --host_ssh_ip=$HOST_SSH_IP \
-             --host_ssh_user=$HOST_SSH_USER \
-             --host_ssh_pass=$HOST_SSH_PASS \
-             --alert_url=$ALERT_URL \
-             --monitor_url=$MONITOR_URL \
-             --docker_monitor_active=$DOCKER_MONITOR_ACTIVE \
-             --linux_health_active=$LINUX_HEALTH_ACTIVE \
-             --dynamic_ip_updater=$DYNAMIC_IP_UPDATER \
-             --docker_monitor_cron="$DOCKER_MONITOR_CRON" \
-             --linux_health_cron="$LINUX_HEALTH_CRON" \
-             --dynamic_ip_cron="$DYNAMIC_IP_CRON" && \
-             set +f && \
-             service cron start && \
-             tail -f /dev/null'
+ADD startup.sh /
+ENTRYPOINT ["/startup.sh"]
