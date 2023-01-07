@@ -22,8 +22,7 @@ services:
       - LINUX_HEALTH_CRON={{ crontimer }}
       - DYNAMIC_IP_CRON={{ crontimer }}
     volumes:
-      # Create a folder on your host machine that you'd like the scan file to go into and then 
-      # mount it here. Leave the second folder alone. The /data part is where the container puts
-      # the scanned data.
-      - /your/data/path/data:/data
+      # Mount the folder of your pipe. If you're using the program without modifying things this 
+      # will always be /opt/cecil. So you shouldn't have to change with volume at all.
+      - /opt/cecil:/hostpipe
     restart: always
