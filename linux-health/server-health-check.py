@@ -10,9 +10,6 @@
 # https://github.com/madeofpendletonwool/
 # 
 # Collin Pendleton <collinp@collinpendleton.com>
-
-#----------------------------------------------------------------------------------------
-
 # --------------------------------------------------------------------- #
 # Import General modules
 import sys
