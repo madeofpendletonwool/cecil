@@ -10,6 +10,8 @@ services:
       - HOST_SSH_IP={{ ip }}
       - HOST_SSH_USER={{ user }}
       - HOST_SSH_PASS={{ pass }} 
+      # Various Vars
+      - CLIENT={{ clientname }}
       # Vars for ntfy urls. You can make both of these the same. However, I use alert url for things that should be reported on right away, and monitor url for things that should be just occacionally viewed.
       - ALERT_URL={{ https://ntfy.com/alert }}
       - MONITOR_URL={{ https://ntfy/monitor }}
@@ -17,12 +19,14 @@ services:
       - DOCKER_MONITOR_ACTIVE=true
       - LINUX_HEALTH_ACTIVE=true
       - DYNAMIC_IP_UPDATER=true
+      - DELL_SCAN_ACTIVE=true
       # Vars to set crontimers on how often each scan should run
       - DOCKER_MONITOR_CRON={{ crontimer }}
       - LINUX_HEALTH_CRON={{ crontimer }}
       - DYNAMIC_IP_CRON={{ crontimer }}
-    volumes:
-      # Mount the folder of your pipe. If you're using the program without modifying things this 
-      # will always be /opt/cecil. So you shouldn't have to change with volume at all.
-      - /opt/cecil:/hostpipe
+      - DELL_CRON={{ crontimer }}
+      # Vars speific to idrac scan
+      - DELL_SCAN_USER={{ idracuser }}
+      - DELL_SCAN_PW={{ idracpw }}
+      - DELL_SCAN_IP={{ idracip }}
     restart: always
