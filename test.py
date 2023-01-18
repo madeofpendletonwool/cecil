@@ -1,35 +1,19 @@
-#!/usr/bin/env python3
-
-import argparse, sys
+from dell_idrac_scan.test_idrac import test_idrac
 import os
-import subprocess
-import paramiko
+import time
+import signal
 
-#Setup pipe so it always runs on boot
-bashCommand = f"touch /home/collinp/python1"
-process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-output, error = process.communicate()
+current_path = os.path.dirname(os.path.abspath(__file__))
 
-#Check if Docker Monitor should run and setup
+ip = 'sdf'
+user = 'sdf'
+password = 'sdf'
 
-bashCommand = f"touch /home/collinp/python2"
-process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-print(bashCommand)
-output, error = process.communicate()
 
-# #Check if Linux Health Scan should run and setup
-# if args_passed['linux_health_active'] == 'true':
-#     bashCommand = f"crontab -l 2>/dev/null; echo '{args_passed['linux_health_cron']} /usr/bin/python3 'echo /opt/cecil/linux-health/server-health-check.py {args_passed['monitor_url']} > /opt/cecil/pipe' | crontab -"
-#     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-#     output, error = process.communicate()
+test_idrac(ip, user, password)
 
-# #Check if Dynamic IP Scan should run and setup
-# if args_passed['dynamic_ip_updater'] == 'true':
-#     bashCommand = f"crontab -l 2>/dev/null; echo '{args_passed['dynamic_ip_cron']} /usr/bin/python3 'echo /opt/cecil/DynamicIP-Updater/checkpublicip.py {args_passed['monitor_url']} > /opt/cecil/pipe' | crontab -"
-#     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-#     output, error = process.communicate()
 
-# 
-# crontab -l 2>/dev/null; echo '$RUNTIMER /usr/bin/bash /camm/cammtask.sh' | crontab - && \
-# crontab -l 2>/dev/null; echo '$RUNTIMER /usr/bin/bash /camm/cammtask.sh' | crontab - && \
-# crontab -l 2>/dev/null; echo '$RUNTIMER /usr/bin/bash /camm/cammtask.sh' | crontab - && \
+with open(current_path + '/dell_idrac_scan/idractest.txt', 'r') as file:
+    data = file.read()
+
+print(data)

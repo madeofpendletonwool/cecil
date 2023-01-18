@@ -25,6 +25,27 @@ import re
 from datetime import datetime
 import logging
 import os
+import time
+import signal
+
+current_path = os.path.dirname(os.path.abspath(__file__))
+
+class Timeout():
+  """Timeout class using ALARM signal"""
+  class Timeout(Exception): pass
+
+  def __init__(self, sec):
+    self.sec = sec
+
+  def __enter__(self):
+    signal.signal(signal.SIGALRM, self.raise_timeout)
+    signal.alarm(self.sec)
+
+  def __exit__(self, *args):
+    signal.alarm(0) # disable alarm
+
+  def raise_timeout(self, *args):
+    raise Timeout.Timeout()
 
 
 
@@ -41,19 +62,20 @@ def test_idrac(ip, user, password):
 
     def check_supported_idrac_version():
         try:
-            response = requests.get('https://%s%s' % (idrac_ip, ENDPOINT),
-                                    verify=False,
-                                    auth=(idrac_username, idrac_password))
+            with Timeout(10):
+                response = requests.get('https://%s%s' % (idrac_ip, ENDPOINT),
+                                        verify=False,
+                                        auth=(idrac_username, idrac_password))
         except:
-            print("No response at this IP :'(")
-            sys.exit(3)
+            # print("No response at this IP :'(")
+            return_code = "No response at this IP :'("
+            return return_code
         if response.status_code != 200:
-            msg = 'WARNING, iDRAC version installed does not support ' +\
-                'this feature using Redfish API'
+            # msg = 'WARNING, iDRAC version installed does not support ' +\
+            #     'this feature using Redfish API'
             print('Either the iDrac does not support Refish API or the credentials are wrong. Could be too old :/')
-            return 'iDrac not responding. Check IP, user, and pass, then try again.'
-            logger.warning(msg)
-            sys.exit(3)
+            return 'Either the iDrac does not support Refish API or the credentials are wrong. Could be too old :/'
+            # logger.warning(msg)
         else:
             pass
 
@@ -76,30 +98,37 @@ def test_idrac(ip, user, password):
         return HostName
 
 
-    if __name__ == '__main__':
 
-        # parser = argparse.ArgumentParser(description='Python script using ' +
-        #                                 'Redfish API to get system hardware' +
-        #                                 'Health')
-        # parser.add_argument('-ip', help='iDRAC IP address', required=True)
-        # parser.add_argument('-u', help='iDRAC username', required=True)
-        # parser.add_argument('-p', help='iDRAC password', required=True)
-
-        # args = vars(parser.parse_args())
-
-        idrac_ip = ip
-        idrac_username = user
-        idrac_password = password
+    idrac_ip = ip
+    idrac_username = user
+    idrac_password = password
 
 
-        check_supported_idrac_version()
 
-        HostName = get_system_information()
+    errormsg = check_supported_idrac_version()
 
-        try:
-            print(f'Host at {idrac_ip} responded! Hit save to remember credentials!')
-            return 'iDrac not responding. Check IP, user, and pass, then try again.'
+    if errormsg != "No response at this IP :'(":
+        if errormsg != 'Either the iDrac does not support Refish API or the credentials are wrong. Could be too old :/':
+            HostName = get_system_information()
 
-        except:
-            print('iDrac not responding. Check IP, user, and pass, then try again.')
-            return 'iDrac not responding. Check IP, user, and pass, then try again.'
+            try:
+                print(f'Host at {idrac_ip} responded! Hit save to remember credentials!')
+                return f'Host at {idrac_ip} responded! Hit save to remember credentials!'
+                with open(current_path + '/idractest.txt', 'w') as f:
+                    f.write(str(errormsg))
+
+            except:
+                print('iDrac not responding. Check IP, user, and pass, then try again.')
+                return 'iDrac not responding. Check IP, user, and pass, then try again.'
+                with open(current_path + '/idractest.txt', 'w') as f:
+                    f.write(str(errormsg))
+        else:
+            with open(current_path + '/idractest.txt', 'w') as f:
+                f.write(str(errormsg))
+
+    else: 
+        # print(errormsg)
+        print(current_path + '/idractest.txt')
+        with open(current_path + '/idractest.txt', 'w') as f:
+            f.write(str(errormsg))
+        return errormsg
