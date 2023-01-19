@@ -4,12 +4,35 @@ from flet.control_event import ControlEvent
 import time
 from dell_idrac_scan.test_idrac import test_idrac
 import os
+import yaml
 
 current_path = os.path.dirname(os.path.abspath(__file__))
+config_location = current_path + '/config.yaml'
+# Create config
+
+if not os.path.exists(config_location):
+    open(config_location, 'w').close()
+# Writing config
+# with open(config_location, 'a') as f:
+#     line1 = '---'
+#     linenew = '\n'
+#     line2 = 'Alarm1:'
+#     line3 = '  - Alarm_Name: New Alarm'
+#     line4 = "  - Time: '08:00:00'"
+#     line5 = "  - Sound: os.path.expanduser('~') + '/pyArmClock/ExampleMusic'"
+
+
+#     f.writelines([line1, linenew, line2, linenew, line3, linenew, line4, linenew, line5])
 print(current_path)
 
 
 def main(page: Page):
+
+    def enable_module():
+        pass
+
+    def disable_module():
+        pass
 
     def test_idrac_button(ip, user, password):
         return_value = test_idrac(ip.value, user.value, password.value)
@@ -18,6 +41,38 @@ def main(page: Page):
         page.go("/idractest")
         # print(idrac_ip.value)
         # test_idrac(idrac_ip.value, idrac_user.value, idrac_pass.value)
+
+    def adjust_ipscan_status(e):
+        time.sleep(1)
+
+        # Check config to ensure it's valid
+
+        if os.path.exists(config_location) and os.path.isfile(config_location) and os.access(config_location, os.R_OK):
+            with open(config_location, 'r') as file_handle:
+                file_content = file_handle.read()
+        try:
+            config = yaml.safe_load(file_content)
+        except yaml.YAMLError as e:
+            print(f'This does not appear to be a valid cecil config: {e}')
+            config = {}
+        else:
+            print(f'Error: {config_location} does not exist or is not readable')
+
+        # Check if ipscan is currently enabled - if not, enable it.
+
+        if config is None:
+            config = {}
+        if 'DynamicIPScannerEnabled' not in config:
+            config['DynamicIPScannerEnabled'] = True
+        elif config['DynamicIPScannerEnabled']:
+            config['DynamicIPScannerEnabled'] = False
+        else:
+            config['DynamicIPScannerEnabled'] = True
+
+        with open(config_location, 'w') as f:
+            yaml.dump(config, f)
+
+        page.go("/statusipscan")
 
 
     def change_theme(e):
@@ -46,6 +101,8 @@ def main(page: Page):
         page.go("/linuxhealth")
     def open_dynamicip(e):
         page.go("/dynamicip")
+    def go_home(e):
+        page.go("/")
 
     page.title = "Cecil"
     page.theme_mode = "dark"
@@ -98,13 +155,44 @@ def main(page: Page):
             )
         )
         if page.route == "/dynamicip" or page.route == "/dynamicip":
+            scanner_text = Text("""
+            The Dynamic IP Scanner is a utility that can be used to check for when a public IP address changes. When your public IP changes, the IP scanner will
+            catch it and send an alert with the IP address that it changed to. You simply need to enable it, and the scanner will begin functioning. 
+            It runs a check every 20 mins to see if the Ip has changed.
+            """)
+            scanner_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[scanner_text])
+            scanner_enable = ft.Checkbox(label='Currently Disabled!', value=False, on_change=adjust_ipscan_status)
+            scanner_enable_text = Text('Enable the Dynamic IP Scanner?')
+            scanner_enable_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[scanner_enable_text, scanner_enable])
             page.views.append(
                 View(
                     "/dynamicip",
                     [
                         AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
                         actions=[theme_icon_button], ),
-                    Text('DynamicIP Scanner Setup page!')
+                        scanner_row,
+                        scanner_enable_row
+                    
+                    ],
+                )
+            )
+        if page.route == "/statusipscan" or page.route == "/statusipscan":
+            status_scanner_text = Text("""
+            Thanks for enabling the IP scanner! We'll start checking your IP for any changes and alert you when we see something.
+            Have a great day!
+            """)
+            status_scanner_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[status_scanner_text])
+            home_button = ft.ElevatedButton("Go home!", icon="home", on_click=go_home)
+            home_button_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[home_button])
+            page.views.append(
+                View(
+                    "/dynamicip",
+                    [
+                        AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
+                        actions=[theme_icon_button], ),
+                        status_scanner_row,
+                        home_button_row
+                    
                     ],
                 )
             )
