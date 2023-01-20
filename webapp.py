@@ -5,6 +5,7 @@ import time
 from dell_idrac_scan.test_idrac import test_idrac
 import os
 import yaml
+import subprocess
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 config_location = current_path + '/config.yaml'
@@ -28,11 +29,15 @@ print(current_path)
 
 def main(page: Page):
 
-    def enable_module():
-        pass
+    def enable_module(module_enable):
+        if module_enable == 'dynamic_ip_scan':
+            bash_script = current_path + '/dynamic_ip_scan/enable_scanner.sh' + f'{} {} {}'
+            subprocess.run(['bash', bash_script])
 
-    def disable_module():
-        pass
+    def disable_module(module_disable):
+        if module_disable == 'dynamic_ip_scan':
+            bash_script = current_path + '/dynamic_ip_scan/disable_scanner.sh'
+            subprocess.run(['bash', bash_scipt])
 
     def test_idrac_button(ip, user, password):
         return_value = test_idrac(ip.value, user.value, password.value)
@@ -72,7 +77,44 @@ def main(page: Page):
         with open(config_location, 'w') as f:
             yaml.dump(config, f)
 
+        with open(config_location, 'r') as file_handle:
+            file_content = file_handle.read()
+        if config['DynamicIPScannerEnabled']:
+            module_enable = 'dynamic_ip_scan'
+            enable_module(module_enable)
+        else:
+            module_disable = 'dynamic_ip_scan'
+            disable_module(module_disable)
+
         page.go("/statusipscan")
+
+    def get_ip_scan_status():
+        if os.path.exists(config_location) and os.path.isfile(config_location) and os.access(config_location, os.R_OK):
+            with open(config_location, 'r') as file_handle:
+                file_content = file_handle.read()
+        try:
+            config = yaml.safe_load(file_content)
+        except yaml.YAMLError as e:
+            print(f'This does not appear to be a valid cecil config: {e}')
+            config = {}
+        else:
+            print(f'Error: {config_location} does not exist or is not readable')
+
+        # Check if ipscan is currently enabled - if not, enable it.
+
+        if config is None:
+            config = {}
+
+        if 'DynamicIPScannerEnabled' not in config:
+            current_status = 'Disabled'
+            return current_status
+
+        elif config['DynamicIPScannerEnabled']:
+            current_status = 'Enabled'
+            return current_status
+        else:
+            current_status = 'Disabled'
+            return current_status
 
 
     def change_theme(e):
@@ -117,14 +159,12 @@ def main(page: Page):
 
 
     cecil_info = """
-    Welcome to Cecil! This application is an alert and monitoring app built to be as generic as possible with 'modules' built-in to provide functionality. 
-    Modules can be used, or can also be ignored simply by selecting them and setting them up. Feel free to click around and utilize them to your heart's content. 
-    They all simply require a very easy setup and the app will walk you through it!
+    Welcome to Cecil! This application is an alert and monitoring app built to be as generic as possible with 'modules' built-in to provide functionality. Modules can be used, or can also be ignored simply by selecting them and setting them up. Feel free to click around and utilize them to your heart's content. They all simply require a very easy setup and the app will walk you through it!
     Feel free to pick any one of the modules below and begin setup!
     """
 
     cecil_text = ft.Text(cecil_info, style=ft.TextThemeStyle.BODY_MEDIUM, text_align=ft.TextAlign.CENTER, size=16)
-    cecil_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[cecil_text])
+    cecil_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[cecil_text])
 
     alert_text = ft.Text('Alerts/Monitors:', style=ft.TextThemeStyle.HEADLINE_MEDIUM, )
     alert_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[alert_text])
@@ -156,12 +196,11 @@ def main(page: Page):
         )
         if page.route == "/dynamicip" or page.route == "/dynamicip":
             scanner_text = Text("""
-            The Dynamic IP Scanner is a utility that can be used to check for when a public IP address changes. When your public IP changes, the IP scanner will
-            catch it and send an alert with the IP address that it changed to. You simply need to enable it, and the scanner will begin functioning. 
-            It runs a check every 20 mins to see if the Ip has changed.
+            The Dynamic IP Scanner is a utility that can be used to check for when a public IP address changes. When your public IP changes, the IP scanner will catch it and send an alert with the IP address that it changed to. You simply need to enable it, and the scanner will begin functioning. It runs a check every 20 mins to see if the Ip has changed.
             """)
-            scanner_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[scanner_text])
-            scanner_enable = ft.Checkbox(label='Currently Disabled!', value=False, on_change=adjust_ipscan_status)
+            scanner_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[scanner_text])
+            current_status = get_ip_scan_status()
+            scanner_enable = ft.Checkbox(label=f'Currently {current_status}!', value=False, on_change=adjust_ipscan_status)
             scanner_enable_text = Text('Enable the Dynamic IP Scanner?')
             scanner_enable_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[scanner_enable_text, scanner_enable])
             page.views.append(
@@ -222,21 +261,26 @@ def main(page: Page):
             idrac_ip = ft.TextField(label="IP Address", hint_text="ex. 10.0.0.1")
             idrac_user = ft.TextField(label="Username", hint_text="ex. root")
             idrac_pass = ft.TextField(label="Password", can_reveal_password=True, password=True, hint_text="ex. password1")
-            idrac_settings_row = ft.Row(controls=[idrac_ip, idrac_user, idrac_pass])
+            idrac_settings_row = ft.ResponsiveRow([
+                ft.Container(idrac_ip, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(idrac_user, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(idrac_pass, col={"sm": 3, "md": 4, "xl":4}, padding=5)
+                # controls=[idrac_ip, idrac_user, idrac_pass])
+            ])
             idrac_info = """
     The iDrac Report Module. One of my favorities, this module is able to report health status of aspects of servers that have iDrac cards.
     Enter the ip, username, and password of the iDrac you'd like to begin getting reports on. The most recent report collected will begin showing up below.
     """
 
             idrac_text = ft.Text(idrac_info, style=ft.TextThemeStyle.BODY_MEDIUM, text_align=ft.TextAlign.CENTER, size=16)
-            idrac_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[idrac_text])
+            idrac_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[idrac_text])
             page.views.append(
                 View(
                     "/idrac",
                     [
                     AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue", actions=[theme_icon_button], ),
                     idrac_row,
-                    Text("iDrac Setup Settings:", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+                    Text("iDrac Server Reports Setup:", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
                     idrac_settings_row,
                     Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_idrac_button(idrac_ip, idrac_user, idrac_pass)), ft.ElevatedButton(text="Save")]),
                     Text("Most Recent Scan Results:", style=ft.TextThemeStyle.HEADLINE_MEDIUM),       
