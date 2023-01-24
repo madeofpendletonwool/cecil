@@ -1,11 +1,14 @@
 import flet as ft
 from flet import AppBar, ElevatedButton, Page, Text, View, colors, icons, ProgressBar, ButtonStyle, IconButton, TextButton, Row
 from flet.control_event import ControlEvent
+from flet.auth.providers.github_oauth_provider import GitHubOAuthProvider
 import time
 from dell_idrac_scan.test_idrac import test_idrac
 import os
 import yaml
 import subprocess
+
+
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 config_location = current_path + '/config.yaml'
@@ -24,25 +27,38 @@ if not os.path.exists(config_location):
 
 
 #     f.writelines([line1, linenew, line2, linenew, line3, linenew, line4, linenew, line5])
-print(current_path)
 
 
 def main(page: Page):
 
+    provider = GitHubOAuthProvider(
+        client_id="clientid",
+        client_secret="clientsecret",
+        redirect_url="http://localhost:38355/api/oauth/redirect",
+    )
+
+#---Defining Modules---------------------------------------------
+
     def enable_module(module_enable):
-        if module_enable == 'dynamic_ip_scan':
-            bash_script = current_path + '/dynamic_ip_scan/enable_scanner.sh' + f'{} {} {}'
-            subprocess.run(['bash', bash_script])
+        pass
+        # if module_enable == 'dynamic_ip_scan':
+        #     bash_script = current_path + '/dynamic_ip_scan/enable_scanner.sh' + f'{} {} {}'
+        #     subprocess.run(['bash', bash_script])
 
     def disable_module(module_disable):
-        if module_disable == 'dynamic_ip_scan':
-            bash_script = current_path + '/dynamic_ip_scan/disable_scanner.sh'
-            subprocess.run(['bash', bash_scipt])
+        pass
+        # if module_disable == 'dynamic_ip_scan':
+        #     bash_script = current_path + '/dynamic_ip_scan/disable_scanner.sh'
+        #     subprocess.run(['bash', bash_scipt])
+
+    def verify_config():
+        if not os.path.exists(config_location):
+            open(config_location, "w").close()
+
 
     def test_idrac_button(ip, user, password):
         return_value = test_idrac(ip.value, user.value, password.value)
         # print(return_value)
-        print('test')
         page.go("/idractest")
         # print(idrac_ip.value)
         # test_idrac(idrac_ip.value, idrac_user.value, idrac_pass.value)
@@ -116,6 +132,7 @@ def main(page: Page):
             current_status = 'Disabled'
             return current_status
 
+#---Code for Theme Change----------------------------------------------------------------
 
     def change_theme(e):
         """
@@ -132,6 +149,17 @@ def main(page: Page):
         time.sleep(.3)
         page.update()
 
+#--Defining Routes---------------------------------------------------
+
+    def view_pop(e):
+        print("View pop:", e.view)
+        page.views.pop()
+        top_view = page.views[-1]
+        page.go(top_view.route)
+
+    def open_ntfy(e):
+        page.go("/ntfysettings")
+
     def open_idrac(e):
         page.go("/idrac")
     def open_idrac_result(e):
@@ -146,41 +174,6 @@ def main(page: Page):
     def go_home(e):
         page.go("/")
 
-    page.title = "Cecil"
-    page.theme_mode = "dark"
-
-
-    theme_icon_button = ft.IconButton(icons.DARK_MODE, selected_icon=icons.LIGHT_MODE, icon_color=colors.BLACK,
-                                   icon_size=35, tooltip="change theme", on_click=change_theme,
-                                   style=ButtonStyle(color={"": colors.BLACK, "selected": colors.WHITE}, ), )
-
-    page.appbar = AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
-                        actions=[theme_icon_button], )
-
-
-    cecil_info = """
-    Welcome to Cecil! This application is an alert and monitoring app built to be as generic as possible with 'modules' built-in to provide functionality. Modules can be used, or can also be ignored simply by selecting them and setting them up. Feel free to click around and utilize them to your heart's content. They all simply require a very easy setup and the app will walk you through it!
-    Feel free to pick any one of the modules below and begin setup!
-    """
-
-    cecil_text = ft.Text(cecil_info, style=ft.TextThemeStyle.BODY_MEDIUM, text_align=ft.TextAlign.CENTER, size=16)
-    cecil_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[cecil_text])
-
-    alert_text = ft.Text('Alerts/Monitors:', style=ft.TextThemeStyle.HEADLINE_MEDIUM, )
-    alert_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[alert_text])
-
-    monitor_text = ft.Text('Reports:', style=ft.TextThemeStyle.HEADLINE_MEDIUM)
-    monitor_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[monitor_text])
-
-    dell_button = ElevatedButton("iDrac Server Health Report", on_click=open_idrac)
-    docker_monitor_button = ElevatedButton("Docker Monitor", on_click=open_dockermon)
-    linux_health_button = ElevatedButton("Linux Health Report", on_click=open_linuxhealth)
-    Dynamic_ip_button = ElevatedButton("Dynamic IP Checker", on_click=open_dynamicip)
-
-    alert_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[docker_monitor_button, Dynamic_ip_button])
-    report_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[dell_button, linux_health_button])
-
-
     def route_change(e):
         print("Route change:", e.route)
         page.views.clear()
@@ -194,7 +187,33 @@ def main(page: Page):
                 ],
             )
         )
+        if page.route == "/ntfysettings" or page.route == "/ntfysettings":
+            verify_config()
+            ntfy_alert = ft.TextField(label="Alert URL", hint_text="ex. https://ntfy.myserver.com/alert")
+            ntfy_monitor = ft.TextField(label="Monitor URL", hint_text="ex. https://ntfy.myserver.com/monitor")
+            ntfy_settings_row = ft.ResponsiveRow([
+                ft.Container(ntfy_alert, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ntfy_monitor, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(idrac_pass, col={"sm": 3, "md": 4, "xl":4}, padding=5)
+            ])
+            ntfy_text = Text("""
+            This is simply where you set the ntfy urls that are passed to the modules for monitors and reports. Enter the ntfy urls in the boxes below and click save. You can also test the urls to ensure you are getting the notifications. Then save them after.
+            """)
+            ntfy_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[scanner_text])
+            page.views.append(
+                View(
+                    "/ntfysettings",
+                    [
+                        AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
+                        actions=[theme_icon_button], ),
+                        ntfy_row,
+                        ntfy_settings_row
+                    
+                    ],
+                )
+            )
         if page.route == "/dynamicip" or page.route == "/dynamicip":
+            verify_config()
             scanner_text = Text("""
             The Dynamic IP Scanner is a utility that can be used to check for when a public IP address changes. When your public IP changes, the IP scanner will catch it and send an alert with the IP address that it changed to. You simply need to enable it, and the scanner will begin functioning. It runs a check every 20 mins to see if the Ip has changed.
             """)
@@ -301,17 +320,113 @@ def main(page: Page):
                     ],
                 )
             )
-
-    def view_pop(e):
-        print("View pop:", e.view)
-        page.views.pop()
-        top_view = page.views[-1]
-        page.go(top_view.route)
-
     page.on_route_change = route_change
     page.on_view_pop = view_pop
 
-    page.add(cecil_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
+#-Create Help Banner-----------------------------------------------------------------------
+    def close_banner(e):
+        page.banner.open = False
+        page.update()
+
+    page.banner = ft.Banner(
+        bgcolor=ft.colors.BLUE,
+        leading=ft.Icon(ft.icons.WAVING_HAND, color=ft.colors.DEEP_ORANGE_500, size=40),
+        content=ft.Text("""
+    Welcome to Cecil! This application is an alert and monitoring app built to be as generic as possible with 'modules' built-in to provide functionality. Modules can be used, or can also be ignored simply by selecting them and setting them up. Feel free to click around and utilize them to your heart's content. They all simply require a very easy setup and the app will walk you through it!
+    Please login, setup the basic configuration (buttons in the basic config row) and then feel free to pick any one of the modules below that to begin setup!
+    """, color=colors.BLACK
+        ),
+        actions=[
+            ft.IconButton(icon=ft.icons.EXIT_TO_APP, on_click=close_banner)
+        ],
+    )
+
+    def show_banner_click(e):
+        page.banner.open = True
+        page.update()
+
+    banner_button = ft.ElevatedButton("Help!", on_click=show_banner_click)
+
+#----Login Changes------------------------------------------------------------
+
+    def login_click(e):
+        page.login(provider)
+
+    def logout_button_click(e):
+        page.logout()
+
+    def on_logout(e):
+        toggle_login_session()
+
+    # def on_login(e: ft.LoginEvent):
+    def on_login(e):
+        print("Access token:", page.auth.token.access_token)
+        print("User ID:", page.auth.user.id)
+        if not e.error:
+            toggle_login_session()
+        # Allow Route Changes only after login
+
+    page.on_login = on_login
+    logout_button = ft.ElevatedButton("Logout", on_click=logout_button_click)
+    login_button = ft.ElevatedButton("Login with GitHub", on_click=login_click)
+    login_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[login_button, banner_button])
+    logout_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[logout_button, banner_button])
+    page.add(login_row, logout_row)
+
+    def toggle_login_session():
+        cecil_row.visible = page.auth is None
+        login_row.visible = page.auth is None
+        logout_row.visible = page.auth is not None
+        basic_row.visible = page.auth is not None
+        basic_modules_row.visible = page.auth is not None
+        alert_row.visible = page.auth is not None
+        alert_modules_row.visible = page.auth is not None
+        monitor_row.visible = page.auth is not None
+        report_modules_row.visible = page.auth is not None
+        page.update()
+
+#-Define initial elements-----------------------------------------------------------------
+
+
+    page.title = "Cecil"
+    page.theme_mode = "dark"
+
+
+    theme_icon_button = ft.IconButton(icons.DARK_MODE, selected_icon=icons.LIGHT_MODE, icon_color=colors.BLACK,
+                                   icon_size=35, tooltip="change theme", on_click=change_theme,
+                                   style=ButtonStyle(color={"": colors.BLACK, "selected": colors.WHITE}, ), )
+
+    page.appbar = AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
+                        actions=[theme_icon_button], )
+
+
+    cecil_info = "Please Login to Access the Modules!"
+
+    cecil_text = ft.Text(cecil_info, style=ft.TextThemeStyle.DISPLAY_MEDIUM, text_align=ft.TextAlign.CENTER, size=16)
+    cecil_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[cecil_text])
+
+    basic_text = ft.Text('Basic Config:', style=ft.TextThemeStyle.HEADLINE_MEDIUM)
+    basic_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[basic_text])
+    
+    alert_text = ft.Text('Alerts/Monitors:', style=ft.TextThemeStyle.HEADLINE_MEDIUM, )
+    alert_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[alert_text])
+
+    monitor_text = ft.Text('Reports:', style=ft.TextThemeStyle.HEADLINE_MEDIUM)
+    monitor_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[monitor_text])
+
+    dell_button = ElevatedButton("iDrac Server Health Report", on_click=open_idrac)
+    docker_monitor_button = ElevatedButton("Docker Monitor", on_click=open_dockermon)
+    linux_health_button = ElevatedButton("Linux Health Report", on_click=open_linuxhealth)
+    Dynamic_ip_button = ElevatedButton("Dynamic IP Checker", on_click=open_dynamicip)
+    ntfy_config_button = ElevatedButton("ntfy Setup", on_click=open_ntfy)
+
+    basic_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[ntfy_config_button])
+    alert_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[docker_monitor_button, Dynamic_ip_button])
+    report_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[dell_button, linux_health_button])
+
+
+    toggle_login_session()
+    page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
 
 # Browser Version
 ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
