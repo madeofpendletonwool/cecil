@@ -4,11 +4,14 @@ from flet.control_event import ControlEvent
 from flet.auth.providers.github_oauth_provider import GitHubOAuthProvider
 import time
 from dell_idrac_scan.test_idrac import test_idrac
+from basic_modules.test_nfty_urls import test_ntfy_urls
 import os
 import yaml
 import subprocess
+import sys
 
-
+clientid = sys.argv[1]
+clientsecret = sys.argv[2]
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 config_location = current_path + '/config.yaml'
@@ -30,10 +33,12 @@ if not os.path.exists(config_location):
 
 
 def main(page: Page):
+    print(clientid)
+    print(clientsecret)
 
     provider = GitHubOAuthProvider(
-        client_id="clientid",
-        client_secret="clientsecret",
+        client_id=clientid,
+        client_secret=clientsecret,
         redirect_url="http://localhost:38355/api/oauth/redirect",
     )
 
@@ -54,6 +59,10 @@ def main(page: Page):
     def verify_config():
         if not os.path.exists(config_location):
             open(config_location, "w").close()
+
+    def test_ntfy_urls(ntfy_alert, ntfy_monitor):
+        return_value = test_ntfy_urls(ntfy_alert, ntfy_monitor)
+        page.go("/ntfytest")
 
 
     def test_idrac_button(ip, user, password):
@@ -183,7 +192,8 @@ def main(page: Page):
                 [
                     AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
                         actions=[theme_icon_button], ),
-                    cecil_row, alert_row, alert_modules_row, monitor_row, report_modules_row
+
+                    login_row, logout_row, cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row
                 ],
             )
         )
@@ -194,12 +204,11 @@ def main(page: Page):
             ntfy_settings_row = ft.ResponsiveRow([
                 ft.Container(ntfy_alert, col={"sm": 3, "md": 4, "xl":4}, padding=5),
                 ft.Container(ntfy_monitor, col={"sm": 3, "md": 4, "xl":4}, padding=5),
-                ft.Container(idrac_pass, col={"sm": 3, "md": 4, "xl":4}, padding=5)
             ])
             ntfy_text = Text("""
             This is simply where you set the ntfy urls that are passed to the modules for monitors and reports. Enter the ntfy urls in the boxes below and click save. You can also test the urls to ensure you are getting the notifications. Then save them after.
             """)
-            ntfy_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[scanner_text])
+            ntfy_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[ntfy_text])
             page.views.append(
                 View(
                     "/ntfysettings",
@@ -207,7 +216,8 @@ def main(page: Page):
                         AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
                         actions=[theme_icon_button], ),
                         ntfy_row,
-                        ntfy_settings_row
+                        ntfy_settings_row,
+                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_ntfy_urls(ntfy_alert, ntfy_monitor)), ft.ElevatedButton(text="Save")])
                     
                     ],
                 )
