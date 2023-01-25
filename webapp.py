@@ -60,8 +60,8 @@ def main(page: Page):
         if not os.path.exists(config_location):
             open(config_location, "w").close()
 
-    def test_ntfy_urls(ntfy_alert, ntfy_monitor):
-        return_value = test_ntfy_urls(ntfy_alert, ntfy_monitor)
+    def test_ntfy(ntfy_alert, ntfy_monitor):
+        return_value = test_ntfy_urls(ntfy_alert.value, ntfy_monitor.value)
         page.go("/ntfytest")
 
 
@@ -217,8 +217,20 @@ def main(page: Page):
                         actions=[theme_icon_button], ),
                         ntfy_row,
                         ntfy_settings_row,
-                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_ntfy_urls(ntfy_alert, ntfy_monitor)), ft.ElevatedButton(text="Save")])
+                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_ntfy(ntfy_alert, ntfy_monitor)), ft.ElevatedButton(text="Save")])
                     
+                    ],
+                )
+            )
+        if page.route == "/ntfytest":
+            page.views.append(
+                View(
+                    "/ntfytest",
+                    [
+                    AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue", actions=[theme_icon_button], ),
+                    Text("Did your servers get the test messages? If so, click save! Otherwise cancel.", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+                    Row([ft.ElevatedButton(text="Save", on_click=go_home), ft.ElevatedButton(text="Cancel", on_click=go_home)])
+
                     ],
                 )
             )
