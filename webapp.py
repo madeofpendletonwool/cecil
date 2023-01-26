@@ -9,6 +9,7 @@ import os
 import yaml
 import subprocess
 import sys
+import shutil
 
 clientid = sys.argv[1]
 clientsecret = sys.argv[2]
@@ -19,17 +20,13 @@ config_location = current_path + '/config.yaml'
 
 if not os.path.exists(config_location):
     open(config_location, 'w').close()
-# Writing config
-# with open(config_location, 'a') as f:
-#     line1 = '---'
-#     linenew = '\n'
-#     line2 = 'Alarm1:'
-#     line3 = '  - Alarm_Name: New Alarm'
-#     line4 = "  - Time: '08:00:00'"
-#     line5 = "  - Sound: os.path.expanduser('~') + '/pyArmClock/ExampleMusic'"
+Writing config
+with open(config_location, 'a') as f:
+    line1 = '---'
+    linenew = '\n'
+    line2 = 'Cecil Configuration File. Modules that you configure will store information in here for setup. DO NOT adjust this file seperately. Working through the GUI configuration for each module will do that for'
 
-
-#     f.writelines([line1, linenew, line2, linenew, line3, linenew, line4, linenew, line5])
+    f.writelines([line1, linenew, line2])
 
 
 def main(page: Page):
@@ -60,10 +57,37 @@ def main(page: Page):
         if not os.path.exists(config_location):
             open(config_location, "w").close()
 
-    def test_ntfy(ntfy_alert, ntfy_monitor):
-        return_value = test_ntfy_urls(ntfy_alert.value, ntfy_monitor.value)
+    def test_ntfy(ntfy_report, ntfy_monitor):
+        return_value = test_ntfy_urls(ntfy_report.value, ntfy_monitor.value)
         page.go("/ntfytest")
+        ntfy_temp_path = current_path + '/basic_modules/ntfytemp.yml'
+        temp_save = {}
+        temp_save['ntfy_report_url'] = ntfy_report.value
+        temp_save['ntfy_monitor_url'] = ntfy_monitor.value
 
+        with open(ntfy_temp_path, 'w') as f:
+            yaml.dump(temp_save, f)
+
+    def adjust_ntfy_urls():
+        # Copy contents of file1.yml to config.yml
+        ntfy_temp_path = current_path + '/basic_modules/ntfytemp.yml'
+        with open(ntfy_temp_path, 'r') as file_to_append:
+            with open(config_location, 'a') as config_file:
+                shutil.copyfileobj(file_to_append, config_file)
+
+        dlg_modal = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("New ntfy urls saved!"),
+            actions=[
+                ft.TextButton("Go Home", on_click=close_dlg_home)
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+            on_dismiss=lambda e: print("Modal dialog dismissed!"),
+        )
+
+        page.dialog = dlg_modal
+        dlg_modal.open = True
+        page.update()
 
     def test_idrac_button(ip, user, password):
         return_value = test_idrac(ip.value, user.value, password.value)
@@ -182,6 +206,10 @@ def main(page: Page):
         page.go("/dynamicip")
     def go_home(e):
         page.go("/")
+    def close_dlg_home(e):
+        dlg_modal.open = False
+        page.update()
+        page.go("/")
 
     def route_change(e):
         print("Route change:", e.route)
@@ -199,10 +227,10 @@ def main(page: Page):
         )
         if page.route == "/ntfysettings" or page.route == "/ntfysettings":
             verify_config()
-            ntfy_alert = ft.TextField(label="Alert URL", hint_text="ex. https://ntfy.myserver.com/alert")
+            ntfy_report = ft.TextField(label="Report URL", hint_text="ex. https://ntfy.myserver.com/report")
             ntfy_monitor = ft.TextField(label="Monitor URL", hint_text="ex. https://ntfy.myserver.com/monitor")
             ntfy_settings_row = ft.ResponsiveRow([
-                ft.Container(ntfy_alert, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ntfy_report, col={"sm": 3, "md": 4, "xl":4}, padding=5),
                 ft.Container(ntfy_monitor, col={"sm": 3, "md": 4, "xl":4}, padding=5),
             ])
             ntfy_text = Text("""
@@ -217,7 +245,8 @@ def main(page: Page):
                         actions=[theme_icon_button], ),
                         ntfy_row,
                         ntfy_settings_row,
-                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_ntfy(ntfy_alert, ntfy_monitor)), ft.ElevatedButton(text="Save")])
+                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_ntfy(ntfy_report, ntfy_monitor))
+                        ])
                     
                     ],
                 )
@@ -229,7 +258,7 @@ def main(page: Page):
                     [
                     AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue", actions=[theme_icon_button], ),
                     Text("Did your servers get the test messages? If so, click save! Otherwise cancel.", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
-                    Row([ft.ElevatedButton(text="Save", on_click=go_home), ft.ElevatedButton(text="Cancel", on_click=go_home)])
+                    Row([ft.ElevatedButton(text="Save", on_click=lambda x: adjust_ntfy_urls()), ft.ElevatedButton(text="Cancel", on_click=go_home)])
 
                     ],
                 )
@@ -452,5 +481,6 @@ def main(page: Page):
 
 # Browser Version
 ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
+# ft.app(target=main)
 # App Version
 # ft.app(target=main, port=8034)
