@@ -1,0 +1,11 @@
+version: '3'
+services:
+  cecil:
+    image: madeofpendletonwool/cecil:latest
+    container_name: cecil
+    tty: true
+    environment:
+      # ID and Secret for Github Authentication
+      - CLIENT_ID={{ Github_ClientID }}
+      - CLIENT_SECRET={{ Github_Secret }}
+    restart: always

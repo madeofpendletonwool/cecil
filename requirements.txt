@@ -1,0 +1,17 @@
+lib-platform
+requests
+subprocess.run
+regex
+psutil
+times
+datetime
+sockets
+configparser
+requires.io
+argparse
+typing
+docker
+pathlib
+pyyaml
+paramiko
+flet
