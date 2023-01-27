@@ -16,8 +16,8 @@ ADD ./requirements.txt /
 RUN pip install -r ./requirements.txt
 # Put cecil Files in place
 # Create structure for cecil
-RUN git clone https://github.com/madeofpendletonwool/cecil.git /opt/cecil && \
-    mkdir -p /opt/cecil/TEMP && \
+RUN git clone https://github.com/madeofpendletonwool/cecil.git /opt/ceciltemp && \
+    mkdir -p /opt/cecil/ && \
     chmod -R 755 /opt
 # Begin cecil Setup
 ADD startup.sh /
