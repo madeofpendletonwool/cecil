@@ -21,5 +21,6 @@ RUN git clone https://github.com/madeofpendletonwool/cecil.git /opt/cecil && \
     chmod -R 755 /opt
 # Begin cecil Setup
 ADD startup.sh /
-ENTRYPOINT ["/startup.sh $CLIENT_ID $CLIENT_SECRET"]
+RUN ls -al /
+ENTRYPOINT ["/startup.sh"]
  
