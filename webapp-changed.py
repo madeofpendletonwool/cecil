@@ -17,16 +17,19 @@ clientsecret = sys.argv[2]
 current_path = os.path.dirname(os.path.abspath(__file__))
 config_location = current_path + '/config.yaml'
 # Create config
-
 if not os.path.exists(config_location):
     open(config_location, 'w').close()
-# Writing config
-with open(config_location, 'a') as f:
-    line1 = '---'
-    linenew = '\n'
-    line2 = 'Cecil Configuration File. Modules that you configure will store information in here for setup. DO NOT adjust this file seperately. Working through the GUI configuration for each module will do that for'
+# Open the file and load its contents into a Python object
+desired_lines = ['---', '#Cecil Configuration File. Modules that you configure will store information in here for setup. DO NOT adjust this file seperately. Working through the GUI configuration for each module will do that for']
 
-    f.writelines([line1, linenew, line2])
+with open(config_location, 'r') as file:
+    file_contents = file.read()
+
+for line in desired_lines:
+    if line not in file_contents:
+        with open(config_location, 'a') as file:
+            file.write(line + '\n')
+file.close()
 
 
 def main(page: Page):
@@ -40,22 +43,31 @@ def main(page: Page):
     )
 
 #---Defining Modules---------------------------------------------
-
+    # Establish basic functionality
     def enable_module(module_enable):
-        pass
-        # if module_enable == 'dynamic_ip_scan':
-        #     bash_script = current_path + '/dynamic_ip_scan/enable_scanner.sh' + f'{} {} {}'
-        #     subprocess.run(['bash', bash_script])
+        # Get Monitor Urls
+        with open('config.yml', 'r') as file:
+            config = yaml.safe_load(file)
+
+        monitor_url = config['ntfy_monitor_url']
+        report_url = config['ntfy_report_url']
+
+        if module_enable == 'dynamic_ip_scan':
+
+            bash_script = current_path + '/dynamic_ip_scan/enable_scanner.sh' + f'{monitor_url}'
+            subprocess.run(['bash', bash_script])
 
     def disable_module(module_disable):
-        pass
-        # if module_disable == 'dynamic_ip_scan':
-        #     bash_script = current_path + '/dynamic_ip_scan/disable_scanner.sh'
-        #     subprocess.run(['bash', bash_scipt])
+        if module_disable == 'dynamic_ip_scan':
+            bash_script = current_path + '/dynamic_ip_scan/disable_scanner.sh'
+            subprocess.run(['bash', bash_scipt])
+
 
     def verify_config():
         if not os.path.exists(config_location):
             open(config_location, "w").close()
+
+    #Funtions for Basic Vars
 
     def test_ntfy(ntfy_report, ntfy_monitor):
         return_value = test_ntfy_urls(ntfy_report.value, ntfy_monitor.value)
@@ -68,18 +80,64 @@ def main(page: Page):
         with open(ntfy_temp_path, 'w') as f:
             yaml.dump(temp_save, f)
 
+    def get_ntfy_urls():
+        with open(config_location, 'r') as file:
+            config = yaml.safe_load(file)
+
+        monitor_url = config['ntfy_monitor_url']
+        report_url = config['ntfy_report_url']
+        # Check current ntfy servers. Report if not set.
+
+        if 'ntfy_monitor_url' not in config:
+            current_monitor_url = 'Not currently set'
+            current_report_url = 'Not currently set'
+            return current_monitor_url, current_report_url
+
+        elif config['ntfy_monitor_url']:
+            current_monitor_url = config['ntfy_monitor_url']
+            current_report_url = config['ntfy_report_url']
+            return current_monitor_url, current_report_url
+
     def adjust_ntfy_urls():
-        # Copy contents of file1.yml to config.yml
+        #Function to close the saved dialog
+        def close_dlg(e):
+            dlg_modal.open = False
+            page.update()
+        # Set tested urls path
         ntfy_temp_path = current_path + '/basic_modules/ntfytemp.yml'
-        with open(ntfy_temp_path, 'r') as file_to_append:
-            with open(config_location, 'a') as config_file:
-                shutil.copyfileobj(file_to_append, config_file)
+        # Load config into a dictionary
+        with open(config_location, 'r') as file_handle:
+            config = yaml.safe_load(file_handle)
+
+        # Update the desired keys in the dictionary
+        with open(ntfy_temp_path, 'r') as temp_file:
+            temp_config = yaml.safe_load(temp_file)
+        config.update(temp_config)
+
+        # Write the updated key-value pairs back to the config file
+        with open(config_location, 'r') as file_handle:
+            lines = file_handle.readlines()
+
+        with open(config_location, 'w') as file_handle:
+            for line in lines:
+                if "ntfy_monitor_url" in line or "ntfy_report_url" in line:
+                    key = line.split(":")[0].strip()
+                    file_handle.write(f"{key}: {config[key]}\n")
+                else:
+                    file_handle.write(line)
+
+        os.remove(ntfy_temp_path)
+
+            # with open(config_location, 'a') as config_file:
+            #     config_file.write('\n')
+            #     shutil.copyfileobj(file_to_append, config_file)
 
         dlg_modal = ft.AlertDialog(
             modal=True,
             title=ft.Text("New ntfy urls saved!"),
+            content=ft.Text("You can now return home!"),
             actions=[
-                ft.TextButton("Go Home", on_click=close_dlg_home)
+                ft.TextButton("Ok", on_click=close_dlg)
             ],
             actions_alignment=ft.MainAxisAlignment.END,
             on_dismiss=lambda e: print("Modal dialog dismissed!"),
@@ -141,13 +199,7 @@ def main(page: Page):
         if os.path.exists(config_location) and os.path.isfile(config_location) and os.access(config_location, os.R_OK):
             with open(config_location, 'r') as file_handle:
                 file_content = file_handle.read()
-        try:
-            config = yaml.safe_load(file_content)
-        except yaml.YAMLError as e:
-            print(f'This does not appear to be a valid cecil config: {e}')
-            config = {}
-        else:
-            print(f'Error: {config_location} does not exist or is not readable')
+        config = yaml.safe_load(file_content)
 
         # Check if ipscan is currently enabled - if not, enable it.
 
@@ -206,10 +258,6 @@ def main(page: Page):
         page.go("/dynamicip")
     def go_home(e):
         page.go("/")
-    def close_dlg_home(e):
-        dlg_modal.open = False
-        page.update()
-        page.go("/")
 
     def route_change(e):
         print("Route change:", e.route)
@@ -237,6 +285,9 @@ def main(page: Page):
             This is simply where you set the ntfy urls that are passed to the modules for monitors and reports. Enter the ntfy urls in the boxes below and click save. You can also test the urls to ensure you are getting the notifications. Then save them after.
             """)
             ntfy_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[ntfy_text])
+            current_monitor_url, current_report_url = get_ntfy_urls()
+            current_monitor = ft.Text(f'Currently, The monitor URL is set to {current_monitor_url}')
+            current_report = ft.Text(f'Currently, The Report URL is set to {current_report_url}')
             page.views.append(
                 View(
                     "/ntfysettings",
@@ -245,7 +296,9 @@ def main(page: Page):
                         actions=[theme_icon_button], ),
                         ntfy_row,
                         ntfy_settings_row,
-                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_ntfy(ntfy_report, ntfy_monitor))
+                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_ntfy(ntfy_report, ntfy_monitor)),
+                        current_monitor,
+                        current_report
                         ])
                     
                     ],
@@ -258,7 +311,7 @@ def main(page: Page):
                     [
                     AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue", actions=[theme_icon_button], ),
                     Text("Did your servers get the test messages? If so, click save! Otherwise cancel.", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
-                    Row([ft.ElevatedButton(text="Save", on_click=lambda x: adjust_ntfy_urls()), ft.ElevatedButton(text="Cancel", on_click=go_home)])
+                    Row([ft.ElevatedButton(text="Save", on_click=lambda x: adjust_ntfy_urls()), ft.ElevatedButton(text="Go Home", on_click=go_home)])
 
                     ],
                 )

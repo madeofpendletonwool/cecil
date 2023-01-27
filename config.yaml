@@ -1,2 +1,5 @@
 ---
-Cecil Configuration File. Modules that you configure will store information in here for setup. DO NOT adjust this file seperately. Working through the GUI configuration for each module will do that for
+#Cecil Configuration File. Modules that you configure will store information in here for setup. DO NOT adjust this file seperately. Working through the GUI configuration for each module will do that for
+
+ntfy_monitor_url: https://ntfy.3rtnetworks.com/3rt-report
+ntfy_report_url: https://ntfy.3rtnetworks.com/3rt-report
