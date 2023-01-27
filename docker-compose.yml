@@ -8,4 +8,6 @@ services:
       # ID and Secret for Github Authentication
       - CLIENT_ID={{ Github_ClientID }}
       - CLIENT_SECRET={{ Github_Secret }}
+    volumes:
+      - ~/cecil/config:/opt/cecil
     restart: always
