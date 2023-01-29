@@ -31,15 +31,21 @@ with open(config_location, 'r') as file:
 
 
 def main(page: Page):
-    print(clientid)
-    print(clientsecret)
+    print(f'Clientid in python {clientid}')
+    print(f'client secret in python {clientsecret}')
+    print(f'auth url in python {authurl}')
+    try:
+        response = requests.get(authurl)
+        print("Accessible URL:", response.status_code)
+    except:
+        print("Inaccessible URL")
 
     provider = GitHubOAuthProvider(
         client_id=clientid,
         client_secret=clientsecret,
         redirect_url=authurl,
     )
-
+    print(provider)
 #---Defining Modules---------------------------------------------
     # Establish basic functionality
 
