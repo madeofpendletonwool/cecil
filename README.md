@@ -1,7 +1,7 @@
 <h1 align='center'> Cecil <h1>
 <h2 align='center'> A Python based Notification stack with a Flutter Web UI <h2> 
 <p align="center">
-<img src="./images/cecil-logos.jpeg">
+<img src="./images/Cecil-logos.jpeg">
 </p>
 
 ## Welcome to Cecil
