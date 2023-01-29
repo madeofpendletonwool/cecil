@@ -1,9 +1,0 @@
- - name: Cecil-IPUpdater-Health
-   hosts: '{{ HOSTSCOPE }}'
-  # hosts: '{{ HOSTSCOPE }}'
-   become: yes
-
-   tasks:
-
-   - name: Run IP Updater
-     ansible.builtin.shell: /usr/bin/python3 /opt/cecil/DynamicIP-Updater/checkpublicip.py
