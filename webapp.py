@@ -40,12 +40,14 @@ def main(page: Page):
     except:
         print("Inaccessible URL")
 
+
     provider = GitHubOAuthProvider(
         client_id=clientid,
         client_secret=clientsecret,
         redirect_url=authurl,
     )
     print(provider)
+
 #---Defining Modules---------------------------------------------
     # Establish basic functionality
 
@@ -299,7 +301,7 @@ def main(page: Page):
                         ntfy_sep,
                         current_monitor,
                         current_report
-                    ]                 
+                    ]
                     ,
                 )
             )
@@ -333,7 +335,7 @@ def main(page: Page):
                         actions=[theme_icon_button], ),
                         scanner_row,
                         scanner_enable_row
-                    
+
                     ],
                 )
             )
@@ -361,7 +363,7 @@ def main(page: Page):
                         actions=[theme_icon_button], ),
                         status_scanner_row,
                         home_button_row
-                    
+
                     ],
                 )
             )
@@ -413,7 +415,7 @@ def main(page: Page):
                     Text("iDrac Server Reports Setup:", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
                     idrac_settings_row,
                     Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_idrac_button(idrac_ip, idrac_user, idrac_pass)), ft.ElevatedButton(text="Save")]),
-                    Text("Most Recent Scan Results:", style=ft.TextThemeStyle.HEADLINE_MEDIUM),       
+                    Text("Most Recent Scan Results:", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
                     ],
                 )
             )
@@ -518,7 +520,7 @@ def main(page: Page):
 
     basic_text = ft.Text('Basic Config:', style=ft.TextThemeStyle.HEADLINE_MEDIUM)
     basic_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[basic_text])
-    
+
     alert_text = ft.Text('Alerts/Monitors:', style=ft.TextThemeStyle.HEADLINE_MEDIUM, )
     alert_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[alert_text])
 
