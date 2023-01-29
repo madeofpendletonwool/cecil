@@ -13,6 +13,7 @@ import shutil
 
 clientid = sys.argv[1]
 clientsecret = sys.argv[2]
+authurl = sys.argv[3]
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 config_location = current_path + '/config.yaml'
@@ -36,7 +37,7 @@ def main(page: Page):
     provider = GitHubOAuthProvider(
         client_id=clientid,
         client_secret=clientsecret,
-        redirect_url="http://localhost:38355/api/oauth/redirect",
+        redirect_url=authurl,
     )
 
 #---Defining Modules---------------------------------------------

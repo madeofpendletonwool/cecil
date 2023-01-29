@@ -8,6 +8,8 @@ services:
       # ID and Secret for Github Authentication
       - CLIENT_ID={{ Github_ClientID }}
       - CLIENT_SECRET={{ Github_Secret }}
+      # The auth URL is the url that you are using to connect to the app. This is required so the auth token is directed to the right location. Use the url that you use for cecil plus '/api/oauth/redirect' at the end. 
+      - AUTH_URL="http://localhost:38355/api/oauth/redirect"
     ports:
       - 38355:38355
     volumes:
