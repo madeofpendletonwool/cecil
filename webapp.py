@@ -1,6 +1,6 @@
 import flet as ft
 from flet import AppBar, ElevatedButton, Page, Text, View, colors, icons, ProgressBar, ButtonStyle, IconButton, TextButton, Row
-from flet.control_event import ControlEvent
+# from flet.control_event import ControlEvent
 from flet.auth.providers.github_oauth_provider import GitHubOAuthProvider
 import time
 from dell_idrac_scan.test_idrac import test_idrac
@@ -433,6 +433,7 @@ def main(page: Page):
                     ],
                 )
             )
+
     page.on_route_change = route_change
     page.on_view_pop = view_pop
 
@@ -465,6 +466,30 @@ def main(page: Page):
     def login_click(e):
         page.login(provider)
 
+    def login(login_user, login_pass):
+        if login_user == '3rt':
+            if login_pass == '3RTpass!':
+                default_page
+                print('Login success!')
+            else: print('Login Failed!')
+        if login_user != '3rt':
+            print('Login Failed!')
+
+    def local_login(e):
+        page.clean()
+        login_user = ft.TextField(label="Username", hint_text="ex. admin")
+        login_pass = ft.TextField(label="Password", can_reveal_password=True, password=True, hint_text="ex. password1")
+        login_row = ft.ResponsiveRow([
+            ft.Container(login_user, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+            ft.Container(login_pass, col={"sm": 3, "md": 4, "xl":4}, padding=5)
+        ])
+        page.add(
+                AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue", actions=[theme_icon_button], ),
+                ft.Text("Login with local user"),
+                login_row,
+                Row([ft.ElevatedButton(text="Login", on_click=lambda x: login(login_user.value, login_pass.value))])
+        )
+
     def logout_button_click(e):
         page.logout()
 
@@ -482,7 +507,9 @@ def main(page: Page):
     page.on_login = on_login
     logout_button = ft.ElevatedButton("Logout", on_click=logout_button_click)
     login_button = ft.ElevatedButton("Login with GitHub", on_click=login_click)
-    login_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[login_button, banner_button])
+    login_local_button = ft.ElevatedButton("Login Locally", on_click=local_login)
+    login_row = ft.Row(controls=[login_button, login_local_button])
+    login_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[login_row, banner_button])
     logout_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[logout_button, banner_button])
     page.add(login_row, logout_row)
 
@@ -539,7 +566,10 @@ def main(page: Page):
 
 
     toggle_login_session()
-    page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
+    def default_page(e):
+        page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
+
+    default_page
 
 # Browser Version
 ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
