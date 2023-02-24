@@ -1,6 +1,7 @@
 import flet as ft
 from flet import AppBar, ElevatedButton, Page, Text, View, colors, icons, ProgressBar, ButtonStyle, IconButton, TextButton, Row
 # from flet.control_event import ControlEvent
+from flet import ControlEvent
 from flet.auth.providers.github_oauth_provider import GitHubOAuthProvider
 import time
 from dell_idrac_scan.test_idrac import test_idrac
@@ -223,7 +224,6 @@ def main(page: Page):
         """
         When the button(to change theme) is clicked, the progress bar is made visible, the theme is changed,
         the progress bar is made invisible, and the page is updated
-
         :param e: The event that triggered the function
         """
         # page.splash.visible = True
@@ -433,7 +433,6 @@ def main(page: Page):
                     ],
                 )
             )
-
     page.on_route_change = route_change
     page.on_view_pop = view_pop
 
@@ -466,30 +465,6 @@ def main(page: Page):
     def login_click(e):
         page.login(provider)
 
-    def login(login_user, login_pass):
-        if login_user == '3rt':
-            if login_pass == '3RTpass!':
-                default_page
-                print('Login success!')
-            else: print('Login Failed!')
-        if login_user != '3rt':
-            print('Login Failed!')
-
-    def local_login(e):
-        page.clean()
-        login_user = ft.TextField(label="Username", hint_text="ex. admin")
-        login_pass = ft.TextField(label="Password", can_reveal_password=True, password=True, hint_text="ex. password1")
-        login_row = ft.ResponsiveRow([
-            ft.Container(login_user, col={"sm": 3, "md": 4, "xl":4}, padding=5),
-            ft.Container(login_pass, col={"sm": 3, "md": 4, "xl":4}, padding=5)
-        ])
-        page.add(
-                AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue", actions=[theme_icon_button], ),
-                ft.Text("Login with local user"),
-                login_row,
-                Row([ft.ElevatedButton(text="Login", on_click=lambda x: login(login_user.value, login_pass.value))])
-        )
-
     def logout_button_click(e):
         page.logout()
 
@@ -504,15 +479,6 @@ def main(page: Page):
             toggle_login_session()
         # Allow Route Changes only after login
 
-    page.on_login = on_login
-    logout_button = ft.ElevatedButton("Logout", on_click=logout_button_click)
-    login_button = ft.ElevatedButton("Login with GitHub", on_click=login_click)
-    login_local_button = ft.ElevatedButton("Login Locally", on_click=local_login)
-    login_row = ft.Row(controls=[login_button, login_local_button])
-    login_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[login_row, banner_button])
-    logout_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[logout_button, banner_button])
-    page.add(login_row, logout_row)
-
     def toggle_login_session():
         cecil_row.visible = page.auth is None
         login_row.visible = page.auth is None
@@ -523,7 +489,61 @@ def main(page: Page):
         alert_modules_row.visible = page.auth is not None
         monitor_row.visible = page.auth is not None
         report_modules_row.visible = page.auth is not None
+        print('in toggle')
         page.update()
+
+    def local_login(e):
+        if local_user_var == '3rt':
+            if local_pass_var == '3RTpass!':
+                print('works!')
+                cecil_row.visible = False
+                login_row.visible = False
+                logout_row.visible = True
+                basic_row.visible = True
+                basic_modules_row.visible = True
+                alert_row.visible = True
+                alert_modules_row.visible = True
+                monitor_row.visible = True
+                report_modules_row.visible = True
+                local_row.visible = False
+                local_submit.visible = False
+                page.update()
+
+
+    def login_values(local_user, local_pass):
+        global local_user_var
+        global local_pass_var
+        local_user_var = local_user
+        local_pass_var = local_pass
+        print('test')
+
+    login_user_var = None
+    login_pass_var = None
+
+
+    def reveal_local(e):
+        print('test')
+        local_row.visible = True
+        page.update()
+
+
+    page.on_login = on_login
+    local_login_button = ft.TextButton(text='Login Locally', on_click=reveal_local)
+    local_text = ft.Text('Login Locally:')
+    login_user = ft.TextField(label="Username", hint_text="ex. admin")
+    login_pass = ft.TextField(label="Password", can_reveal_password=True, password=True, hint_text="ex. password1")
+
+    local_submit = ft.TextButton(text='Submit', on_click=lambda e: (login_values(login_user.value, login_pass.value), local_login(e)))
+    local_row = ft.Row(controls=[local_text, login_user, login_pass, local_submit])
+    local_row.visible = False
+    logout_button = ft.ElevatedButton("Logout", on_click=logout_button_click)
+    
+    login_button = ft.ElevatedButton("Login with GitHub", on_click=login_click)
+    login_button_row = ft.Row(controls=[login_button, local_login_button])
+    login_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[login_button_row, banner_button])
+    logout_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[logout_button, banner_button])
+    page.add(login_row, logout_row, local_row)
+
 
 #-Define initial elements-----------------------------------------------------------------
 
@@ -566,10 +586,7 @@ def main(page: Page):
 
 
     toggle_login_session()
-    def default_page(e):
-        page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
-
-    default_page
+    page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
 
 # Browser Version
 ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
