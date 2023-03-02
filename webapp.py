@@ -489,13 +489,11 @@ def main(page: Page):
         alert_modules_row.visible = page.auth is not None
         monitor_row.visible = page.auth is not None
         report_modules_row.visible = page.auth is not None
-        print('in toggle')
         page.update()
 
     def local_login(e):
         if local_user_var == '3rt':
             if local_pass_var == '3RTpass!':
-                print('works!')
                 cecil_row.visible = False
                 login_row.visible = False
                 logout_row.visible = True
@@ -515,14 +513,12 @@ def main(page: Page):
         global local_pass_var
         local_user_var = local_user
         local_pass_var = local_pass
-        print('test')
 
     login_user_var = None
     login_pass_var = None
 
 
     def reveal_local(e):
-        print('test')
         local_row.visible = True
         page.update()
 
