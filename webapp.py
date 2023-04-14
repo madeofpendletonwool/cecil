@@ -12,9 +12,27 @@ import subprocess
 import sys
 import shutil
 
-clientid = sys.argv[1]
-clientsecret = sys.argv[2]
-authurl = sys.argv[3]
+if len(sys.argv) > 1:
+    clientid = sys.argv[1]
+else:
+    clientid = 'testing'
+
+if len(sys.argv) > 2:
+    clientsecret = sys.argv[2]
+else:
+    clientsecret = 'testing'
+
+if len(sys.argv) > 3:
+    authurl = sys.argv[3]
+else:
+    authurl = 'testing'
+
+if clientid == False:
+    clientid = 'testing'
+if clientsecret == False:
+    clientsecret = 'testing'
+if authurl == False:
+    authurl = 'testing'
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 config_location = current_path + '/config.yaml'
@@ -250,6 +268,9 @@ def main(page: Page):
     def open_idrac_result(e):
         page.go("/idrac/result")
 
+    def open_wfc(e):
+        page.go("/wfc")
+
     def open_dockermon(e):
         page.go("/dockermon")
     def open_linuxhealth(e):
@@ -375,6 +396,39 @@ def main(page: Page):
                         AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
                         actions=[theme_icon_button], ),
                     Text('Linux Health Scan Setup page!')
+                    ],
+                )
+            )
+        if page.route == "/wfc" or page.route == "/wfc":
+            def close_banner(e):
+                page.banner.open = False
+                page.update()
+
+            page.banner = ft.Banner(
+                bgcolor=ft.colors.AMBER_100,
+                leading=ft.Icon(ft.icons.WARNING_AMBER_ROUNDED, color=ft.colors.AMBER, size=40),
+                content=ft.Text(
+                    "Welcome to the windows file checker!"
+                ),
+                actions=[
+                    ft.TextButton("Close", on_click=close_banner)
+                ],
+            )
+
+            def show_banner_click(e):
+                page.banner.open = True
+                page.update()
+
+            wfc_help = ft.ElevatedButton("Help", on_click=show_banner_click)
+            page.views.append(
+                View(
+                    "/wfc",
+                    [
+                        AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
+                        actions=[theme_icon_button], ),
+                    wfc_help,
+                    Text('Windows File Checker Setup page!')
+
                     ],
                 )
             )
@@ -575,9 +629,10 @@ def main(page: Page):
     linux_health_button = ElevatedButton("Linux Health Report", on_click=open_linuxhealth)
     Dynamic_ip_button = ElevatedButton("Dynamic IP Checker", on_click=open_dynamicip)
     ntfy_config_button = ElevatedButton("ntfy Setup", on_click=open_ntfy)
+    windows_file_check_button = ElevatedButton("Windows File Checker", on_click=open_wfc)
 
     basic_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[ntfy_config_button])
-    alert_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[docker_monitor_button, Dynamic_ip_button])
+    alert_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[docker_monitor_button, Dynamic_ip_button, windows_file_check_button])
     report_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[dell_button, linux_health_button])
 
 
@@ -585,7 +640,7 @@ def main(page: Page):
     page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
 
 # Browser Version
-ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
+# ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
 # ft.app(target=main)
 # App Version
-# ft.app(target=main, port=8034)
+ft.app(target=main, port=8034)
