@@ -11,6 +11,11 @@ import yaml
 import subprocess
 import sys
 import shutil
+import datetime
+from datetime import datetime, timedelta
+import time
+import schedule
+import threading
 
 if len(sys.argv) > 1:
     clientid = sys.argv[1]
@@ -66,6 +71,104 @@ def main(page: Page):
         redirect_url=authurl,
     )
     print(provider)
+
+#---Creating Class for module creation---------------------------
+
+    class Module_Change:
+        def __init__(self, page, windows_name=None, windows_domain=None, windows_user=None, windows_pass=None, windows_file_path=None, windows_cron=None, windows_check_frequency=None):
+            # Windows File Checker Vars
+            self.windows_name = windows_name
+            self.windows_domain = windows_domain
+            self.windows_user = windows_user
+            self.windows_pass = windows_pass
+            self.windows_file_path = windows_file_path
+            self.windows_cron = windows_cron
+            self.windows_check_frequency = windows_check_frequency
+
+            # Create a separate thread to handle scheduling
+            scheduler_thread = threading.Thread(target=self.run_schedule, daemon=True)
+            scheduler_thread.start()
+
+        @staticmethod
+        def run_schedule():
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
+
+
+        def setup_wfc(self):
+
+            # Schedule the file check
+            cron_interval = int(self.windows_cron)  # Replace this with the actual cron parsing logic
+            schedule.every(cron_interval).seconds.do(self.run_wfc)
+
+        def run_wfc(self):
+            from smb.SMBConnection import SMBConnection
+            import os
+
+            def authenticate_windows_machine(username, password, domain, server_name):
+                try:
+                    conn = SMBConnection(username, password, "client_machine_name", server_name, domain=domain, use_ntlm_v2=True, is_direct_tcp=True)
+                    success = conn.connect(server_name, 445)
+
+                    if success:
+                        print("Authentication successful")
+                        return conn
+
+                    else:
+                        print("Authentication failed")
+                        return None
+
+                except Exception as e:
+                    print("Error:", e)
+                    return None
+
+            conn = authenticate_windows_machine(self.windows_user, self.windows_pass, self.windows_domain, self.windows_name)
+
+            if conn is None:
+                print("Cannot perform the file check due to authentication failure")
+                return
+
+            # Check if any new files have been created in the specified folder within the last specified hours
+            share_folder = self.windows_file_path
+            check_frequency = int(self.windows_check_frequency)
+
+            # Calculate the cutoff datetime
+            now = datetime.now()
+            cutoff_time = now - timedelta(hours=check_frequency)
+
+            # List files in the shared folder
+            _, share_name_and_path = share_folder[2:].split('\\', 1)
+            share_name, *folders = share_name_and_path.split('\\')
+            path = '/' + '/'.join(folders)  # Convert the path format
+
+            files = conn.listPath(share_name, path)  # Add this line to list the files
+
+
+            # List all files in the shared folder
+            print("All files in the shared folder:")
+            for f in files:
+                print(f.filename, datetime.fromtimestamp(f.last_attr_change_time))
+
+            print("Cutoff time:", cutoff_time)
+
+            # Check if any files have been modified within the specified time period
+            new_files = [f for f in files if f.filename not in ['.', '..'] and datetime.fromtimestamp(f.last_attr_change_time) > cutoff_time]  # Ignore . and .. files
+
+            if new_files:
+                print("New files found:")
+                for f in new_files:
+                    print(f.filename)
+            else:
+                print("No new files found within the specified time period")
+
+
+
+
+
+    user_modules = Module_Change(page)
+
+
 
 #---Defining Modules---------------------------------------------
     # Establish basic functionality
@@ -418,7 +521,25 @@ def main(page: Page):
             def show_banner_click(e):
                 page.banner.open = True
                 page.update()
+            windows_name = ft.TextField(label="Name of system to monitor", hint_text="ex. WINDOWS-01")
+            windows_domain = ft.TextField(label="Domain Name", hint_text="ex. MYDOMAIN.LOCAL")
+            windows_user = ft.TextField(label="Username to login with", hint_text="ex. username")
+            windows_pass = ft.TextField(label="Password to login with", hint_text="ex. Password!", password=True, can_reveal_password=True)
+            windows_file_path = ft.TextField(label="Path of Folder to Monitor", hint_text="ex. \\\\TEST-DC01\\testfolder")
+            windows_cron = ft.TextField(label="How Often should the check job run? (In cron)", hint_text="0 0 * * *")
+            windows_check_frequency = ft.TextField(label="Freqency of update to folder (In hours)", hint_text="24")
+            submit_button = ft.ElevatedButton(text="Submit", on_click=lambda e: set_and_run_wfc(user_modules, e))
 
+            def set_and_run_wfc(user_modules, event):
+                user_modules.windows_name = windows_name.value
+                user_modules.windows_domain = windows_domain.value
+                user_modules.windows_user = windows_user.value
+                user_modules.windows_pass = windows_pass.value
+                user_modules.windows_file_path = windows_file_path.value
+                user_modules.windows_cron = windows_cron.value
+                user_modules.windows_check_frequency = windows_check_frequency.value
+
+                user_modules.setup_wfc()
             wfc_help = ft.ElevatedButton("Help", on_click=show_banner_click)
             page.views.append(
                 View(
@@ -427,8 +548,15 @@ def main(page: Page):
                         AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
                         actions=[theme_icon_button], ),
                     wfc_help,
-                    Text('Windows File Checker Setup page!')
-
+                    Text('Setup a new monitor on a windows system below - Results will appear here after scans kick off'),
+                    windows_name,
+                    windows_domain, 
+                    windows_user,
+                    windows_pass,
+                    windows_file_path,
+                    windows_cron,
+                    windows_check_frequency,
+                    submit_button
                     ],
                 )
             )
@@ -546,8 +674,8 @@ def main(page: Page):
         page.update()
 
     def local_login(e):
-        if local_user_var == '3rt':
-            if local_pass_var == '3RTpass!':
+        if local_user_var == 'admin':
+            if local_pass_var == 'admin':
                 cecil_row.visible = False
                 login_row.visible = False
                 logout_row.visible = True
@@ -578,7 +706,7 @@ def main(page: Page):
 
 
     page.on_login = on_login
-    local_login_button = ft.TextButton(text='Login Locally', on_click=reveal_local)
+    local_login_button = ft.ElevatedButton(text='Login Locally', on_click=reveal_local)
     local_text = ft.Text('Login Locally:')
     login_user = ft.TextField(label="Username", hint_text="ex. admin")
     login_pass = ft.TextField(label="Password", can_reveal_password=True, password=True, hint_text="ex. password1")

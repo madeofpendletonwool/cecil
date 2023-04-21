@@ -15,3 +15,5 @@ pathlib
 pyyaml
 paramiko
 flet
+pysmb
+schedule
