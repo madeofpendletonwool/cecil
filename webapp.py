@@ -12,9 +12,27 @@ import subprocess
 import sys
 import shutil
 
-clientid = sys.argv[1]
-clientsecret = sys.argv[2]
-authurl = sys.argv[3]
+if len(sys.argv) > 1:
+    clientid = sys.argv[1]
+else:
+    clientid = 'testing'
+
+if len(sys.argv) > 2:
+    clientsecret = sys.argv[2]
+else:
+    clientsecret = 'testing'
+
+if len(sys.argv) > 3:
+    authurl = sys.argv[3]
+else:
+    authurl = 'testing'
+
+if clientid == False:
+    clientid = 'testing'
+if clientsecret == False:
+    clientsecret = 'testing'
+if authurl == False:
+    authurl = 'testing'
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 config_location = current_path + '/config.yaml'
@@ -250,6 +268,9 @@ def main(page: Page):
     def open_idrac_result(e):
         page.go("/idrac/result")
 
+    def open_wfc(e):
+        page.go("/wfc")
+
     def open_dockermon(e):
         page.go("/dockermon")
     def open_linuxhealth(e):
@@ -378,6 +399,39 @@ def main(page: Page):
                     ],
                 )
             )
+        if page.route == "/wfc" or page.route == "/wfc":
+            def close_banner(e):
+                page.banner.open = False
+                page.update()
+
+            page.banner = ft.Banner(
+                bgcolor=ft.colors.AMBER_100,
+                leading=ft.Icon(ft.icons.WARNING_AMBER_ROUNDED, color=ft.colors.AMBER, size=40),
+                content=ft.Text(
+                    "Welcome to the windows file checker!"
+                ),
+                actions=[
+                    ft.TextButton("Close", on_click=close_banner)
+                ],
+            )
+
+            def show_banner_click(e):
+                page.banner.open = True
+                page.update()
+
+            wfc_help = ft.ElevatedButton("Help", on_click=show_banner_click)
+            page.views.append(
+                View(
+                    "/wfc",
+                    [
+                        AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
+                        actions=[theme_icon_button], ),
+                    wfc_help,
+                    Text('Windows File Checker Setup page!')
+
+                    ],
+                )
+            )
         if page.route == "/dockermon":
             page.views.append(
                 View(
@@ -479,13 +533,6 @@ def main(page: Page):
             toggle_login_session()
         # Allow Route Changes only after login
 
-    page.on_login = on_login
-    logout_button = ft.ElevatedButton("Logout", on_click=logout_button_click)
-    login_button = ft.ElevatedButton("Login with GitHub", on_click=login_click)
-    login_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[login_button, banner_button])
-    logout_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[logout_button, banner_button])
-    page.add(login_row, logout_row)
-
     def toggle_login_session():
         cecil_row.visible = page.auth is None
         login_row.visible = page.auth is None
@@ -497,6 +544,56 @@ def main(page: Page):
         monitor_row.visible = page.auth is not None
         report_modules_row.visible = page.auth is not None
         page.update()
+
+    def local_login(e):
+        if local_user_var == '3rt':
+            if local_pass_var == '3RTpass!':
+                cecil_row.visible = False
+                login_row.visible = False
+                logout_row.visible = True
+                basic_row.visible = True
+                basic_modules_row.visible = True
+                alert_row.visible = True
+                alert_modules_row.visible = True
+                monitor_row.visible = True
+                report_modules_row.visible = True
+                local_row.visible = False
+                local_submit.visible = False
+                page.update()
+
+
+    def login_values(local_user, local_pass):
+        global local_user_var
+        global local_pass_var
+        local_user_var = local_user
+        local_pass_var = local_pass
+
+    login_user_var = None
+    login_pass_var = None
+
+
+    def reveal_local(e):
+        local_row.visible = True
+        page.update()
+
+
+    page.on_login = on_login
+    local_login_button = ft.TextButton(text='Login Locally', on_click=reveal_local)
+    local_text = ft.Text('Login Locally:')
+    login_user = ft.TextField(label="Username", hint_text="ex. admin")
+    login_pass = ft.TextField(label="Password", can_reveal_password=True, password=True, hint_text="ex. password1")
+
+    local_submit = ft.TextButton(text='Submit', on_click=lambda e: (login_values(login_user.value, login_pass.value), local_login(e)))
+    local_row = ft.Row(controls=[local_text, login_user, login_pass, local_submit])
+    local_row.visible = False
+    logout_button = ft.ElevatedButton("Logout", on_click=logout_button_click)
+    
+    login_button = ft.ElevatedButton("Login with GitHub", on_click=login_click)
+    login_button_row = ft.Row(controls=[login_button, local_login_button])
+    login_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[login_button_row, banner_button])
+    logout_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[logout_button, banner_button])
+    page.add(login_row, logout_row, local_row)
+
 
 #-Define initial elements-----------------------------------------------------------------
 
@@ -532,9 +629,10 @@ def main(page: Page):
     linux_health_button = ElevatedButton("Linux Health Report", on_click=open_linuxhealth)
     Dynamic_ip_button = ElevatedButton("Dynamic IP Checker", on_click=open_dynamicip)
     ntfy_config_button = ElevatedButton("ntfy Setup", on_click=open_ntfy)
+    windows_file_check_button = ElevatedButton("Windows File Checker", on_click=open_wfc)
 
     basic_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[ntfy_config_button])
-    alert_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[docker_monitor_button, Dynamic_ip_button])
+    alert_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[docker_monitor_button, Dynamic_ip_button, windows_file_check_button])
     report_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[dell_button, linux_health_button])
 
 
@@ -542,7 +640,7 @@ def main(page: Page):
     page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
 
 # Browser Version
-ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
+# ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
 # ft.app(target=main)
 # App Version
-# ft.app(target=main, port=8034)
+ft.app(target=main, port=8034)
