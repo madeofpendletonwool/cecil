@@ -1,5 +1,20 @@
----
-#Cecil Configuration File. Modules that you configure will store information in here for setup. DO NOT adjust this file seperately. Working through the GUI configuration for each module will do that for
-
-ntfy_monitor_url: https://ntfy.3rtnetworks.com/3rt-report
-ntfy_report_url: https://ntfy.3rtnetworks.com/3rt-report
+config:
+  wfc:
+  - windows_check_frequency: '24'
+    windows_cron: 0 0 * * *
+    windows_domain: WORKGROUP
+    windows_file_path: \\CPENDLETON-3RTDESK\testfolder
+    windows_name: CPENDLETON-3RTDESK
+    windows_pass: orange11
+    windows_user: collinp
+  - windows_check_frequency: '24'
+    windows_cron: 0 0 * * *
+    windows_domain: WORKGROUP
+    windows_file_path: \\CPENDLETON-3RTDESK\Import
+    windows_name: CPENDLETON-3RTDESK
+    windows_pass: orange11
+    windows_user: collinp
+file_metadata:
+  description: Cecil Configuration File. Modules that you configure will store information
+    in here for setup. DO NOT adjust this file seperately. Working through the GUI
+    configuration for each module will do that for

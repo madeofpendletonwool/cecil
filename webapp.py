@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 import time
 import schedule
 import threading
+from croniter import croniter
 
 if len(sys.argv) > 1:
     clientid = sys.argv[1]
@@ -75,7 +76,7 @@ def main(page: Page):
 #---Creating Class for module creation---------------------------
 
     class Module_Change:
-        def __init__(self, page, windows_name=None, windows_domain=None, windows_user=None, windows_pass=None, windows_file_path=None, windows_cron=None, windows_check_frequency=None):
+        def __init__(self, page, config_location, windows_name=None, windows_domain=None, windows_user=None, windows_pass=None, windows_file_path=None, windows_cron=None, windows_check_frequency=None):
             # Windows File Checker Vars
             self.windows_name = windows_name
             self.windows_domain = windows_domain
@@ -84,23 +85,76 @@ def main(page: Page):
             self.windows_file_path = windows_file_path
             self.windows_cron = windows_cron
             self.windows_check_frequency = windows_check_frequency
+            self.page = page
+            self.config_location = config_location
 
             # Create a separate thread to handle scheduling
             scheduler_thread = threading.Thread(target=self.run_schedule, daemon=True)
             scheduler_thread.start()
 
+        def show_info_snackbar(self, message):
+            self.page.snack_bar = ft.SnackBar(ft.Text(message))
+            self.page.snack_bar.open = True
+            self.page.update()
+
         @staticmethod
         def run_schedule():
             while True:
                 schedule.run_pending()
-                time.sleep(1)
+                time.sleep(60)
 
 
         def setup_wfc(self):
+            def run_wfc_and_reschedule(job):
+                self.run_wfc()
+
+                # Update the scheduled job's interval to the next run
+                now = datetime.now()
+                next_run = cron_iter.get_next(datetime)
+                interval = (next_run - now).total_seconds()
+                job.interval = interval
+                job.last_run = now
+                job.next_run = now + timedelta(seconds=job.interval)
 
             # Schedule the file check
-            cron_interval = int(self.windows_cron)  # Replace this with the actual cron parsing logic
-            schedule.every(cron_interval).seconds.do(self.run_wfc)
+            cron_expression = self.windows_cron
+            cron_iter = croniter(cron_expression)
+            now = datetime.now()
+            next_run = cron_iter.get_next(datetime)
+            interval = (next_run - now).total_seconds()
+
+
+            schedule.every(interval).seconds.do(run_wfc_and_reschedule)
+            print(f"wfc scan armed for {self.windows_file_path}")
+
+            # cron_interval = int(self.windows_cron)  # Replace this with the actual cron parsing logic
+            # schedule.every(cron_interval).seconds.do(self.run_wfc)
+        
+        def delete_wfc_config(self):
+            def close_wfc_dlg(e):
+                delete_wfc_dlg.open = False
+                self.page.update()
+
+            def delete_wfc(e):
+                delete_wfc_dlg.open = False
+                self.page.update()
+
+            print('test')
+
+            delete_wfc_dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(f"Would you like to delete the WFC for {self.windows_file_path}?"),
+            actions=[
+            ft.TextButton(content=ft.Text("Delete WFC", color=ft.colors.RED_400), on_click=delete_wfc),
+            ft.TextButton("Cancel", on_click=close_wfc_dlg)
+            ],
+            actions_alignment=ft.MainAxisAlignment.END
+            )
+
+            self.page.dialog = delete_wfc_dlg
+            delete_wfc_dlg.open = True
+            self.page.update()
+    
 
         def run_wfc(self):
             from smb.SMBConnection import SMBConnection
@@ -166,7 +220,7 @@ def main(page: Page):
 
 
 
-    user_modules = Module_Change(page)
+    user_modules = Module_Change(page, config_location)
 
 
 
@@ -196,6 +250,60 @@ def main(page: Page):
     def verify_config():
         if not os.path.exists(config_location):
             open(config_location, "w").close()
+
+    def save_wfc_config(config_location, wfc_config):
+        with open(config_location, 'r') as file_handle:
+            config = yaml.safe_load(file_handle)
+
+        if config is None:
+            config = {'config': {}}
+
+        if 'config' not in config:
+            config['config'] = {}
+        elif config['config'] is None:
+            config['config'] = {}
+
+        if 'wfc' not in config['config']:
+            config['config']['wfc'] = []
+
+        config['config']['wfc'].append(wfc_config)
+
+        with open(config_location, 'w') as file_handle:
+            yaml.dump(config, file_handle)
+
+    def load_wfc_configs(config_location):
+        with open(config_location, 'r') as file_handle:
+            config = yaml.safe_load(file_handle)
+
+        wfc_configs = config['config'].get('wfc', [])
+        return wfc_configs
+
+    wfc_configs = load_wfc_configs(config_location)
+
+    for wfc_config in wfc_configs:
+        windows_name = wfc_config['windows_name']
+        windows_domain = wfc_config['windows_domain']
+        windows_user = wfc_config['windows_user']
+        windows_pass = wfc_config['windows_pass']
+        windows_file_path = wfc_config['windows_file_path']
+        windows_cron = wfc_config['windows_cron']
+        windows_check_frequency = wfc_config['windows_check_frequency']
+
+        module_change_instance = Module_Change(
+            page,
+            config_location,
+            windows_name=windows_name,
+            windows_domain=windows_domain,
+            windows_user=windows_user,
+            windows_pass=windows_pass,
+            windows_file_path=windows_file_path,
+            windows_cron=windows_cron,
+            windows_check_frequency=windows_check_frequency
+        )
+        module_change_instance.setup_wfc()
+
+
+
 
     #Funtions for Basic Vars
 
@@ -518,6 +626,51 @@ def main(page: Page):
                 ],
             )
 
+            wfc_configs = load_wfc_configs(config_location)
+            wfc_table_rows = []
+
+            for wfc_config in wfc_configs:
+                windows_name = wfc_config['windows_name']
+                windows_domain = wfc_config['windows_domain']
+                windows_user = wfc_config['windows_user']
+                windows_pass = wfc_config['windows_pass']
+                windows_file_path = wfc_config['windows_file_path']
+                windows_cron = wfc_config['windows_cron']
+                windows_check_frequency = wfc_config['windows_check_frequency']
+
+                row = ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text(windows_name)),
+                        ft.DataCell(ft.Text(windows_domain)),
+                        ft.DataCell(ft.Text(windows_user)),
+                        ft.DataCell(ft.Text(windows_pass)),
+                        ft.DataCell(ft.Text(windows_file_path)),
+                        ft.DataCell(ft.Text(windows_cron)),
+                        ft.DataCell(ft.Text(windows_check_frequency)),
+                    ],
+                    # Add any necessary on_select_changed or other event handlers here
+                    on_select_changed=(
+                        lambda user_modules_copy: 
+                            lambda x: user_modules_copy.delete_wfc_config()
+                    )(user_modules)
+                )
+
+                wfc_table_rows.append(row)
+
+            wfc_table = ft.DataTable(
+                # Add desired styling options here
+                columns=[
+                    ft.DataColumn(ft.Text("Windows Name")),
+                    ft.DataColumn(ft.Text("Windows Domain")),
+                    ft.DataColumn(ft.Text("Windows User")),
+                    ft.DataColumn(ft.Text("Windows Pass")),
+                    ft.DataColumn(ft.Text("Windows File Path")),
+                    ft.DataColumn(ft.Text("Windows Cron")),
+                    ft.DataColumn(ft.Text("Windows Check Frequency")),
+                ],
+                rows=wfc_table_rows
+            )
+
             def show_banner_click(e):
                 page.banner.open = True
                 page.update()
@@ -539,7 +692,23 @@ def main(page: Page):
                 user_modules.windows_cron = windows_cron.value
                 user_modules.windows_check_frequency = windows_check_frequency.value
 
+                wfc_config = {
+                    'windows_name': windows_name.value,
+                    'windows_domain': windows_domain.value,
+                    'windows_user': windows_user.value,
+                    'windows_pass': windows_pass.value,
+                    'windows_file_path': windows_file_path.value,
+                    'windows_cron': windows_cron.value,
+                    'windows_check_frequency': windows_check_frequency.value,
+                }
+
+                save_wfc_config(config_location, wfc_config)
+
                 user_modules.setup_wfc()
+
+                user_modules.show_info_snackbar("Windows File Checker has been scheduled and setup!")
+                user_modules.page.update()
+
             wfc_help = ft.ElevatedButton("Help", on_click=show_banner_click)
             page.views.append(
                 View(
@@ -556,7 +725,9 @@ def main(page: Page):
                     windows_file_path,
                     windows_cron,
                     windows_check_frequency,
-                    submit_button
+                    submit_button,
+                    Text('Existing Windows File Checker Scans:'),
+                    wfc_table
                     ],
                 )
             )
