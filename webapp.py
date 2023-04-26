@@ -6,6 +6,7 @@ from flet.auth.providers.github_oauth_provider import GitHubOAuthProvider
 import time
 from dell_idrac_scan.test_idrac import test_idrac
 from basic_modules.test_nfty_urls import test_ntfy_urls
+import basic_modules.test_nfty_urls
 import os
 import yaml
 import subprocess
@@ -53,6 +54,24 @@ if not os.path.exists(config_location):
 # Open the file and load its contents into a Python object
 with open(config_location, 'r') as file:
     file_contents = file.read()
+
+# Get ntfy urls
+
+with open(config_location, 'r') as file:
+    config_data = yaml.safe_load(file)
+
+ntfy_monitor_url = config_data.get('ntfy_monitor_url', None)
+ntfy_report_url = config_data.get('ntfy_report_url', None)
+
+if ntfy_monitor_url:
+    print("ntfy_monitor_url:", ntfy_monitor_url)
+else:
+    print("ntfy_monitor_url not found in the config")
+
+if ntfy_report_url:
+    print("ntfy_report_url:", ntfy_report_url)
+else:
+    print("ntfy_report_url not found in the config")
 
 
 def main(page: Page):
@@ -198,23 +217,27 @@ def main(page: Page):
 
             files = conn.listPath(share_name, path)  # Add this line to list the files
 
-
             # List all files in the shared folder
-            print("All files in the shared folder:")
+            file_list_message = "All files in the shared folder:\n"
             for f in files:
-                print(f.filename, datetime.fromtimestamp(f.last_attr_change_time))
+                file_list_message += f"{f.filename} {datetime.fromtimestamp(f.last_attr_change_time)}\n"
 
-            print("Cutoff time:", cutoff_time)
+            send_monitor_notification(ntfy_monitor_url, file_list_message)
+
+            cutoff_message = f"Cutoff time: {cutoff_time}"
+            send_monitor_notification(ntfy_monitor_url, cutoff_message)
 
             # Check if any files have been modified within the specified time period
             new_files = [f for f in files if f.filename not in ['.', '..'] and datetime.fromtimestamp(f.last_attr_change_time) > cutoff_time]  # Ignore . and .. files
 
             if new_files:
-                print("New files found:")
+                new_files_message = "New files found:\n"
                 for f in new_files:
-                    print(f.filename)
+                    new_files_message += f"{f.filename}\n"
+                send_monitor_notification(ntfy_monitor_url, new_files_message)
             else:
-                print("No new files found within the specified time period")
+                no_new_files_message = "No new files found within the specified time period"
+                send_monitor_notification(ntfy_monitor_url, no_new_files_message)
 
 
 
@@ -710,10 +733,8 @@ def main(page: Page):
                 user_modules.page.update()
 
             wfc_help = ft.ElevatedButton("Help", on_click=show_banner_click)
-            page.views.append(
-                View(
-                    "/wfc",
-                    [
+            wfc_view = ft.View("/wfc", 
+                [
                         AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
                         actions=[theme_icon_button], ),
                     wfc_help,
@@ -728,9 +749,12 @@ def main(page: Page):
                     submit_button,
                     Text('Existing Windows File Checker Scans:'),
                     wfc_table
-                    ],
-                )
+                    ]
             )
+            wfc_view.scroll = ft.ScrollMode.AUTO
+            page.views.append(
+                wfc_view
+                )
         if page.route == "/dockermon":
             page.views.append(
                 View(
