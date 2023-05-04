@@ -6,6 +6,8 @@ from flet.auth.providers.github_oauth_provider import GitHubOAuthProvider
 import time
 from dell_idrac_scan.test_idrac import test_idrac
 from basic_modules.test_nfty_urls import test_ntfy_urls
+from basic_modules.send_notification import send_monitor_notification
+from basic_modules.send_notification import send_alert_notification
 import basic_modules.test_nfty_urls
 import os
 import yaml
@@ -18,6 +20,7 @@ import time
 import schedule
 import threading
 from croniter import croniter
+import pytz
 
 if len(sys.argv) > 1:
     clientid = sys.argv[1]
@@ -74,6 +77,7 @@ else:
     print("ntfy_report_url not found in the config")
 
 
+
 def main(page: Page):
     print(f'Clientid in python {clientid}')
     print(f'client secret in python {clientsecret}')
@@ -92,10 +96,14 @@ def main(page: Page):
     )
     print(provider)
 
+
+
 #---Creating Class for module creation---------------------------
 
+
+
     class Module_Change:
-        def __init__(self, page, config_location, windows_name=None, windows_domain=None, windows_user=None, windows_pass=None, windows_file_path=None, windows_cron=None, windows_check_frequency=None):
+        def __init__(self, page, config_location, windows_name=None, windows_domain=None, windows_user=None, windows_pass=None, windows_file_path=None, windows_cron="* * * * *", windows_check_frequency=None):
             # Windows File Checker Vars
             self.windows_name = windows_name
             self.windows_domain = windows_domain
@@ -111,43 +119,62 @@ def main(page: Page):
             scheduler_thread = threading.Thread(target=self.run_schedule, daemon=True)
             scheduler_thread.start()
 
+            # self.setup_wfc()
+
+        def run_schedule(self):
+            while True:
+                print('run pending')
+                schedule.run_pending()
+                time.sleep(10)
+
         def show_info_snackbar(self, message):
             self.page.snack_bar = ft.SnackBar(ft.Text(message))
             self.page.snack_bar.open = True
             self.page.update()
 
-        @staticmethod
-        def run_schedule():
-            while True:
-                schedule.run_pending()
-                time.sleep(60)
+        def run_wfc_and_reschedule(self, cron_iter, job):
+            print("Running run_wfc_and_reschedule for", self.windows_file_path)
+            self.run_wfc()
+            timezone = pytz.timezone("America/Chicago")
+            now = datetime.now(timezone)
+            next_run = cron_iter.get_next(datetime)  # Already timezone-aware
+            interval = (next_run - now).total_seconds()
+            print("Rescheduling the job with an interval of", interval, "seconds")
+
+            job.interval = interval
+            self.setup_wfc()
 
 
         def setup_wfc(self):
-            def run_wfc_and_reschedule(job):
-                self.run_wfc()
+            def wfc_wrapper():
+                print("wfc_wrapper called")  # Add this print statement
+                self.run_wfc_and_reschedule(cron_iter, self.job)
 
-                # Update the scheduled job's interval to the next run
-                now = datetime.now()
-                next_run = cron_iter.get_next(datetime)
-                interval = (next_run - now).total_seconds()
-                job.interval = interval
-                job.last_run = now
-                job.next_run = now + timedelta(seconds=job.interval)
+            cron_string = self.windows_cron
+            cron_iter = croniter(cron_string)
+            timezone = pytz.timezone("America/Chicago")
+            now = datetime.now(timezone)
 
-            # Schedule the file check
-            cron_expression = self.windows_cron
-            cron_iter = croniter(cron_expression)
-            now = datetime.now()
-            next_run = cron_iter.get_next(datetime)
+            # Round the current time down to the nearest minute
+            now_rounded = now.replace(second=0, microsecond=0)
+            
+            next_run = cron_iter.get_next(datetime, start_time=now_rounded)
+
+            # Calculate the interval in seconds
             interval = (next_run - now).total_seconds()
+            interval = round(interval)  # Round the interval to remove decimals
 
+            print("cron_string:", cron_string)
+            print("interval:", interval)
 
-            schedule.every(interval).seconds.do(run_wfc_and_reschedule)
-            print(f"wfc scan armed for {self.windows_file_path}")
+            # Cancel the existing job if it exists
+            if hasattr(self, 'job') and self.job is not None:
+                schedule.cancel_job(self.job)
 
-            # cron_interval = int(self.windows_cron)  # Replace this with the actual cron parsing logic
-            # schedule.every(cron_interval).seconds.do(self.run_wfc)
+            # Schedule the new job
+            self.job = schedule.every(interval).seconds.do(wfc_wrapper)
+            print("Job scheduled:", self.job)
+
         
         def delete_wfc_config(self):
             def close_wfc_dlg(e):
@@ -178,6 +205,7 @@ def main(page: Page):
         def run_wfc(self):
             from smb.SMBConnection import SMBConnection
             import os
+            print('running wfc')
 
             def authenticate_windows_machine(username, password, domain, server_name):
                 try:
@@ -222,25 +250,25 @@ def main(page: Page):
             for f in files:
                 file_list_message += f"{f.filename} {datetime.fromtimestamp(f.last_attr_change_time)}\n"
 
-            send_monitor_notification(ntfy_monitor_url, file_list_message)
+            # send_monitor_notification(ntfy_monitor_url, file_list_message)
 
             cutoff_message = f"Cutoff time: {cutoff_time}"
-            send_monitor_notification(ntfy_monitor_url, cutoff_message)
+            # send_monitor_notification(ntfy_monitor_url, file_list_message)
 
             # Check if any files have been modified within the specified time period
             new_files = [f for f in files if f.filename not in ['.', '..'] and datetime.fromtimestamp(f.last_attr_change_time) > cutoff_time]  # Ignore . and .. files
 
+            # Consolidate messages into a single string
+            consolidated_message = f"File check for {self.windows_file_path}:\n\n"
+            consolidated_message += "All files in the shared folder:\n" + file_list_message + "\n"
+            consolidated_message += "Cutoff time: " + cutoff_message + "\n\n"
+
             if new_files:
-                new_files_message = "New files found:\n"
-                for f in new_files:
-                    new_files_message += f"{f.filename}\n"
-                send_monitor_notification(ntfy_monitor_url, new_files_message)
+                consolidated_message += "New files found:\n" + new_files_message + "\n"
             else:
-                no_new_files_message = "No new files found within the specified time period"
-                send_monitor_notification(ntfy_monitor_url, no_new_files_message)
+                consolidated_message += "No new files found within the specified time period\n"
 
-
-
+            send_monitor_notification(ntfy_monitor_url, consolidated_message)
 
 
     user_modules = Module_Change(page, config_location)
@@ -302,6 +330,14 @@ def main(page: Page):
         return wfc_configs
 
     wfc_configs = load_wfc_configs(config_location)
+
+    first_job = True
+    for wfc_config in wfc_configs:
+        # (Code to set up the Module_Change instance here...)
+
+        if first_job:
+            user_modules.setup_wfc()
+            first_job = False
 
     for wfc_config in wfc_configs:
         windows_name = wfc_config['windows_name']
@@ -966,4 +1002,4 @@ def main(page: Page):
 # ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
 # ft.app(target=main)
 # App Version
-ft.app(target=main, port=8034)
+ft.app(target=main, port=8035)
