@@ -8,6 +8,7 @@ from dell_idrac_scan.test_idrac import test_idrac
 from basic_modules.test_nfty_urls import test_ntfy_urls
 from basic_modules.send_notification import send_monitor_notification
 from basic_modules.send_notification import send_alert_notification
+import basic_modules.functions
 import basic_modules.test_nfty_urls
 import os
 import yaml
@@ -115,10 +116,6 @@ def main(page: Page):
             self.page = page
             self.config_location = config_location
 
-            # Create a separate thread to handle scheduling
-            scheduler_thread = threading.Thread(target=self.run_schedule, daemon=True)
-            scheduler_thread.start()
-
             # self.setup_wfc()
 
         def run_schedule(self):
@@ -142,13 +139,18 @@ def main(page: Page):
             print("Rescheduling the job with an interval of", interval, "seconds")
 
             job.interval = interval
-            self.setup_wfc()
 
 
         def setup_wfc(self):
+            # ...
+
+            # Create a separate thread to handle scheduling
+            scheduler_thread = threading.Thread(target=self.run_schedule, daemon=True)
+            scheduler_thread.start()  # ...to here
+
             def wfc_wrapper():
                 print("wfc_wrapper called")  # Add this print statement
-                self.run_wfc_and_reschedule(cron_iter, self.job)
+                self.run_wfc_and_reschedule(cron_iter, self.job if hasattr(self, 'job') else None)
 
             cron_string = self.windows_cron
             cron_iter = croniter(cron_string)
@@ -174,6 +176,7 @@ def main(page: Page):
             # Schedule the new job
             self.job = schedule.every(interval).seconds.do(wfc_wrapper)
             print("Job scheduled:", self.job)
+
 
         
         def delete_wfc_config(self):
@@ -326,40 +329,46 @@ def main(page: Page):
         with open(config_location, 'r') as file_handle:
             config = yaml.safe_load(file_handle)
 
+        if config is None or config.get('config') is None:
+            print(f"No 'config' section found in the configuration file at {config_location}")
+            return []
+                
         wfc_configs = config['config'].get('wfc', [])
         return wfc_configs
 
+
     wfc_configs = load_wfc_configs(config_location)
 
-    first_job = True
-    for wfc_config in wfc_configs:
-        # (Code to set up the Module_Change instance here...)
+    if not wfc_configs:
+        print("No wfc configs found.")
+    else:
+        # create a list to hold all module_change_instances
+        module_change_instances = []
+        for wfc_config in wfc_configs:
+            windows_name = wfc_config['windows_name']
+            windows_domain = wfc_config['windows_domain']
+            windows_user = wfc_config['windows_user']
+            windows_pass = wfc_config['windows_pass']
+            windows_file_path = wfc_config['windows_file_path']
+            windows_cron = wfc_config['windows_cron']
+            windows_check_frequency = wfc_config['windows_check_frequency']
 
-        if first_job:
-            user_modules.setup_wfc()
-            first_job = False
+            module_change_instance = Module_Change(
+                page,
+                config_location,
+                windows_name=windows_name,
+                windows_domain=windows_domain,
+                windows_user=windows_user,
+                windows_pass=windows_pass,
+                windows_file_path=windows_file_path,
+                windows_cron=windows_cron,
+                windows_check_frequency=windows_check_frequency
+            )
+            module_change_instances.append(module_change_instance)
 
-    for wfc_config in wfc_configs:
-        windows_name = wfc_config['windows_name']
-        windows_domain = wfc_config['windows_domain']
-        windows_user = wfc_config['windows_user']
-        windows_pass = wfc_config['windows_pass']
-        windows_file_path = wfc_config['windows_file_path']
-        windows_cron = wfc_config['windows_cron']
-        windows_check_frequency = wfc_config['windows_check_frequency']
+        # Now that all properties have been set, we can setup the job for the first instance
+        module_change_instances[0].setup_wfc()
 
-        module_change_instance = Module_Change(
-            page,
-            config_location,
-            windows_name=windows_name,
-            windows_domain=windows_domain,
-            windows_user=windows_user,
-            windows_pass=windows_pass,
-            windows_file_path=windows_file_path,
-            windows_cron=windows_cron,
-            windows_check_frequency=windows_check_frequency
-        )
-        module_change_instance.setup_wfc()
 
 
 
@@ -506,6 +515,22 @@ def main(page: Page):
             current_status = 'Disabled'
             return current_status
 
+    def test_cw(page, ticket_company, public_key, private_key, domain, clientid, board_id, company_id):
+        def close_dlg(e):
+            dlg_modal.open = False
+            page.update()
+
+        ticket_created = basic_modules.functions.create_ticket(ticket_company, public_key, private_key, domain, clientid, board_id, company_id)
+
+        ticket_dlg = ft.AlertDialog(
+            title=ft.Text("Ticket Status"),
+            content=ft.Text(ticket_created),
+            actions=[
+            ft.TextButton("Save", on_click=close_dlg),
+            ft.TextButton("Close", on_click=close_dlg),
+        ],
+        )
+
 #---Code for Theme Change----------------------------------------------------------------
 
     def change_theme(e):
@@ -532,6 +557,8 @@ def main(page: Page):
 
     def open_ntfy(e):
         page.go("/ntfysettings")
+    def open_ticketing(e):
+        page.go("/ticketingsetup")
 
     def open_idrac(e):
         page.go("/idrac")
@@ -592,6 +619,55 @@ def main(page: Page):
                         ntfy_sep,
                         current_monitor,
                         current_report
+                    ]
+                    ,
+                )
+            )
+        if page.route == "/ticketingsetup" or page.route == "/ticketingsetup":
+            # Internal Company Setup
+            ticket_private = ft.TextField(label="Private Key", hint_text="ex. https://ntfy.myserver.com/report")
+            ticket_public = ft.TextField(label="Public Key", hint_text="ex. https://ntfy.myserver.com/monitor")
+            ticket_clientid = ft.TextField(label="Client ID", hint_text="ex. https://ntfy.myserver.com/monitor")
+            ticket_company = ft.TextField(label="Company Name", hint_text="ex. https://ntfy.myserver.com/monitor")
+            ticket_domain = ft.TextField(label="Domain", hint_text="ex. https://ntfy.myserver.com/monitor")
+            # Ticket Setup
+            ticket_boardid = ft.TextField(label="Board ID", hint_text="ex. https://ntfy.myserver.com/monitor")
+            ticket_clientnumber = ft.TextField(label="Client Number", hint_text="ex. https://ntfy.myserver.com/monitor")
+
+            ticket_setup_row = ft.ResponsiveRow([
+                ft.Container(ticket_private, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ticket_public, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ticket_clientid, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ticket_company, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ticket_domain, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+            ])
+            client_setup_row = ft.ResponsiveRow([
+                ft.Container(ticket_boardid, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ticket_clientnumber, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+            ])
+            ticket_info = ft.Text("Fill in info about your connectwise instance below")
+            client_info = ft.Text("Fill in info about your connectwise client below. Board to put tickets on, client to put tickets under")
+            ticket_text = Text("""
+            This is where you can setup ticketing. Currently only Connectwise Ticketing is integrated with options to inegrate with the APIs they offer. It requires a valid Company, Public key, Private Key, and domain. In addition you also need a valid clientid from connectwise directly. That must be requested from them. It's a pain honestly. Read their docs for more information.
+            """)
+            ticket_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[ticket_text])
+            # current_monitor_url, current_report_url = get_ntfy_urls()
+            # current_monitor = ft.Text(f'The monitor URL is set to: {current_monitor_url}', style=ft.TextThemeStyle.BODY_MEDIUM, size=32)
+            # current_report = ft.Text(f'The Report URL is set to: {current_report_url}', style=ft.TextThemeStyle.BODY_MEDIUM, size=32)
+            # ntfy_sep = ft.Card(content=ft.Container(Text("Current ntfy server Settings", weight="bold", style=ft.TextThemeStyle.BODY_MEDIUM, size=25), padding=8, expand=True))
+            page.views.append(
+                View(
+                    "/ntfysettings",
+                    [
+                        AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
+                        actions=[theme_icon_button], ),
+                        ticket_row,
+                        ticket_info,
+                        ticket_setup_row,
+                        client_info,
+                        client_setup_row,
+                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_cw(page, ticket_company.value, ticket_public.value, ticket_private.value, ticket_domain.value, ticket_clientid.value, ticket_boardid.value, ticket_clientnumber.value))])
+
                     ]
                     ,
                 )
@@ -722,7 +798,6 @@ def main(page: Page):
                     ft.DataColumn(ft.Text("Windows Name")),
                     ft.DataColumn(ft.Text("Windows Domain")),
                     ft.DataColumn(ft.Text("Windows User")),
-                    ft.DataColumn(ft.Text("Windows Pass")),
                     ft.DataColumn(ft.Text("Windows File Path")),
                     ft.DataColumn(ft.Text("Windows Cron")),
                     ft.DataColumn(ft.Text("Windows Check Frequency")),
@@ -988,9 +1063,10 @@ def main(page: Page):
     linux_health_button = ElevatedButton("Linux Health Report", on_click=open_linuxhealth)
     Dynamic_ip_button = ElevatedButton("Dynamic IP Checker", on_click=open_dynamicip)
     ntfy_config_button = ElevatedButton("ntfy Setup", on_click=open_ntfy)
+    ticket_config_button = ElevatedButton("Ticketing Setup", on_click=open_ticketing)
     windows_file_check_button = ElevatedButton("Windows File Checker", on_click=open_wfc)
 
-    basic_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[ntfy_config_button])
+    basic_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[ntfy_config_button, ticket_config_button])
     alert_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[docker_monitor_button, Dynamic_ip_button, windows_file_check_button])
     report_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[dell_button, linux_health_button])
 
