@@ -15,3 +15,6 @@ pathlib
 pyyaml
 paramiko
 flet
+pysmb
+schedule
+croniter

@@ -6,11 +6,22 @@ from flet.auth.providers.github_oauth_provider import GitHubOAuthProvider
 import time
 from dell_idrac_scan.test_idrac import test_idrac
 from basic_modules.test_nfty_urls import test_ntfy_urls
+from basic_modules.send_notification import send_monitor_notification
+from basic_modules.send_notification import send_alert_notification
+import basic_modules.functions
+import basic_modules.test_nfty_urls
 import os
 import yaml
 import subprocess
 import sys
 import shutil
+import datetime
+from datetime import datetime, timedelta
+import time
+import schedule
+import threading
+from croniter import croniter
+import pytz
 
 if len(sys.argv) > 1:
     clientid = sys.argv[1]
@@ -48,6 +59,25 @@ if not os.path.exists(config_location):
 with open(config_location, 'r') as file:
     file_contents = file.read()
 
+# Get ntfy urls
+
+with open(config_location, 'r') as file:
+    config_data = yaml.safe_load(file)
+
+ntfy_monitor_url = config_data.get('ntfy_monitor_url', None)
+ntfy_report_url = config_data.get('ntfy_report_url', None)
+
+if ntfy_monitor_url:
+    print("ntfy_monitor_url:", ntfy_monitor_url)
+else:
+    print("ntfy_monitor_url not found in the config")
+
+if ntfy_report_url:
+    print("ntfy_report_url:", ntfy_report_url)
+else:
+    print("ntfy_report_url not found in the config")
+
+
 
 def main(page: Page):
     print(f'Clientid in python {clientid}')
@@ -66,6 +96,187 @@ def main(page: Page):
         redirect_url=authurl,
     )
     print(provider)
+
+
+
+#---Creating Class for module creation---------------------------
+
+
+
+    class Module_Change:
+        def __init__(self, page, config_location, windows_name=None, windows_domain=None, windows_user=None, windows_pass=None, windows_file_path=None, windows_cron="* * * * *", windows_check_frequency=None):
+            # Windows File Checker Vars
+            self.windows_name = windows_name
+            self.windows_domain = windows_domain
+            self.windows_user = windows_user
+            self.windows_pass = windows_pass
+            self.windows_file_path = windows_file_path
+            self.windows_cron = windows_cron
+            self.windows_check_frequency = windows_check_frequency
+            self.page = page
+            self.config_location = config_location
+
+            # self.setup_wfc()
+
+        def run_schedule(self):
+            while True:
+                print('run pending')
+                schedule.run_pending()
+                time.sleep(10)
+
+        def show_info_snackbar(self, message):
+            self.page.snack_bar = ft.SnackBar(ft.Text(message))
+            self.page.snack_bar.open = True
+            self.page.update()
+
+        def run_wfc_and_reschedule(self, cron_iter, job):
+            print("Running run_wfc_and_reschedule for", self.windows_file_path)
+            self.run_wfc()
+            timezone = pytz.timezone("America/Chicago")
+            now = datetime.now(timezone)
+            next_run = cron_iter.get_next(datetime)  # Already timezone-aware
+            interval = (next_run - now).total_seconds()
+            print("Rescheduling the job with an interval of", interval, "seconds")
+
+            job.interval = interval
+
+
+        def setup_wfc(self):
+            # ...
+
+            # Create a separate thread to handle scheduling
+            scheduler_thread = threading.Thread(target=self.run_schedule, daemon=True)
+            scheduler_thread.start()  # ...to here
+
+            def wfc_wrapper():
+                print("wfc_wrapper called")  # Add this print statement
+                self.run_wfc_and_reschedule(cron_iter, self.job if hasattr(self, 'job') else None)
+
+            cron_string = self.windows_cron
+            cron_iter = croniter(cron_string)
+            timezone = pytz.timezone("America/Chicago")
+            now = datetime.now(timezone)
+
+            # Round the current time down to the nearest minute
+            now_rounded = now.replace(second=0, microsecond=0)
+            
+            next_run = cron_iter.get_next(datetime, start_time=now_rounded)
+
+            # Calculate the interval in seconds
+            interval = (next_run - now).total_seconds()
+            interval = round(interval)  # Round the interval to remove decimals
+
+            print("cron_string:", cron_string)
+            print("interval:", interval)
+
+            # Cancel the existing job if it exists
+            if hasattr(self, 'job') and self.job is not None:
+                schedule.cancel_job(self.job)
+
+            # Schedule the new job
+            self.job = schedule.every(interval).seconds.do(wfc_wrapper)
+            print("Job scheduled:", self.job)
+
+
+        
+        def delete_wfc_config(self):
+            def close_wfc_dlg(e):
+                delete_wfc_dlg.open = False
+                self.page.update()
+
+            def delete_wfc(e):
+                delete_wfc_dlg.open = False
+                self.page.update()
+
+            print('test')
+
+            delete_wfc_dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(f"Would you like to delete the WFC for {self.windows_file_path}?"),
+            actions=[
+            ft.TextButton(content=ft.Text("Delete WFC", color=ft.colors.RED_400), on_click=delete_wfc),
+            ft.TextButton("Cancel", on_click=close_wfc_dlg)
+            ],
+            actions_alignment=ft.MainAxisAlignment.END
+            )
+
+            self.page.dialog = delete_wfc_dlg
+            delete_wfc_dlg.open = True
+            self.page.update()
+    
+
+        def run_wfc(self):
+            from smb.SMBConnection import SMBConnection
+            import os
+            print('running wfc')
+
+            def authenticate_windows_machine(username, password, domain, server_name):
+                try:
+                    conn = SMBConnection(username, password, "client_machine_name", server_name, domain=domain, use_ntlm_v2=True, is_direct_tcp=True)
+                    success = conn.connect(server_name, 445)
+
+                    if success:
+                        print("Authentication successful")
+                        return conn
+
+                    else:
+                        print("Authentication failed")
+                        return None
+
+                except Exception as e:
+                    print("Error:", e)
+                    return None
+
+            conn = authenticate_windows_machine(self.windows_user, self.windows_pass, self.windows_domain, self.windows_name)
+
+            if conn is None:
+                print("Cannot perform the file check due to authentication failure")
+                return
+
+            # Check if any new files have been created in the specified folder within the last specified hours
+            share_folder = self.windows_file_path
+            check_frequency = int(self.windows_check_frequency)
+
+            # Calculate the cutoff datetime
+            now = datetime.now()
+            cutoff_time = now - timedelta(hours=check_frequency)
+
+            # List files in the shared folder
+            _, share_name_and_path = share_folder[2:].split('\\', 1)
+            share_name, *folders = share_name_and_path.split('\\')
+            path = '/' + '/'.join(folders)  # Convert the path format
+
+            files = conn.listPath(share_name, path)  # Add this line to list the files
+
+            # List all files in the shared folder
+            file_list_message = "All files in the shared folder:\n"
+            for f in files:
+                file_list_message += f"{f.filename} {datetime.fromtimestamp(f.last_attr_change_time)}\n"
+
+            # send_monitor_notification(ntfy_monitor_url, file_list_message)
+
+            cutoff_message = f"Cutoff time: {cutoff_time}"
+            # send_monitor_notification(ntfy_monitor_url, file_list_message)
+
+            # Check if any files have been modified within the specified time period
+            new_files = [f for f in files if f.filename not in ['.', '..'] and datetime.fromtimestamp(f.last_attr_change_time) > cutoff_time]  # Ignore . and .. files
+
+            # Consolidate messages into a single string
+            consolidated_message = f"File check for {self.windows_file_path}:\n\n"
+            consolidated_message += "All files in the shared folder:\n" + file_list_message + "\n"
+            consolidated_message += "Cutoff time: " + cutoff_message + "\n\n"
+
+            if new_files:
+                consolidated_message += "New files found:\n" + new_files_message + "\n"
+            else:
+                consolidated_message += "No new files found within the specified time period\n"
+
+            send_monitor_notification(ntfy_monitor_url, consolidated_message)
+
+
+    user_modules = Module_Change(page, config_location)
+
+
 
 #---Defining Modules---------------------------------------------
     # Establish basic functionality
@@ -93,6 +304,74 @@ def main(page: Page):
     def verify_config():
         if not os.path.exists(config_location):
             open(config_location, "w").close()
+
+    def save_wfc_config(config_location, wfc_config):
+        with open(config_location, 'r') as file_handle:
+            config = yaml.safe_load(file_handle)
+
+        if config is None:
+            config = {'config': {}}
+
+        if 'config' not in config:
+            config['config'] = {}
+        elif config['config'] is None:
+            config['config'] = {}
+
+        if 'wfc' not in config['config']:
+            config['config']['wfc'] = []
+
+        config['config']['wfc'].append(wfc_config)
+
+        with open(config_location, 'w') as file_handle:
+            yaml.dump(config, file_handle)
+
+    def load_wfc_configs(config_location):
+        with open(config_location, 'r') as file_handle:
+            config = yaml.safe_load(file_handle)
+
+        if config is None or config.get('config') is None:
+            print(f"No 'config' section found in the configuration file at {config_location}")
+            return []
+                
+        wfc_configs = config['config'].get('wfc', [])
+        return wfc_configs
+
+
+    wfc_configs = load_wfc_configs(config_location)
+
+    if not wfc_configs:
+        print("No wfc configs found.")
+    else:
+        # create a list to hold all module_change_instances
+        module_change_instances = []
+        for wfc_config in wfc_configs:
+            windows_name = wfc_config['windows_name']
+            windows_domain = wfc_config['windows_domain']
+            windows_user = wfc_config['windows_user']
+            windows_pass = wfc_config['windows_pass']
+            windows_file_path = wfc_config['windows_file_path']
+            windows_cron = wfc_config['windows_cron']
+            windows_check_frequency = wfc_config['windows_check_frequency']
+
+            module_change_instance = Module_Change(
+                page,
+                config_location,
+                windows_name=windows_name,
+                windows_domain=windows_domain,
+                windows_user=windows_user,
+                windows_pass=windows_pass,
+                windows_file_path=windows_file_path,
+                windows_cron=windows_cron,
+                windows_check_frequency=windows_check_frequency
+            )
+            module_change_instances.append(module_change_instance)
+
+        # Now that all properties have been set, we can setup the job for the first instance
+        module_change_instances[0].setup_wfc()
+
+
+
+
 
     #Funtions for Basic Vars
 
@@ -236,6 +515,22 @@ def main(page: Page):
             current_status = 'Disabled'
             return current_status
 
+    def test_cw(page, ticket_company, public_key, private_key, domain, clientid, board_id, company_id):
+        def close_dlg(e):
+            dlg_modal.open = False
+            page.update()
+
+        ticket_created = basic_modules.functions.create_ticket(ticket_company, public_key, private_key, domain, clientid, board_id, company_id)
+
+        ticket_dlg = ft.AlertDialog(
+            title=ft.Text("Ticket Status"),
+            content=ft.Text(ticket_created),
+            actions=[
+            ft.TextButton("Save", on_click=close_dlg),
+            ft.TextButton("Close", on_click=close_dlg),
+        ],
+        )
+
 #---Code for Theme Change----------------------------------------------------------------
 
     def change_theme(e):
@@ -262,6 +557,8 @@ def main(page: Page):
 
     def open_ntfy(e):
         page.go("/ntfysettings")
+    def open_ticketing(e):
+        page.go("/ticketingsetup")
 
     def open_idrac(e):
         page.go("/idrac")
@@ -322,6 +619,55 @@ def main(page: Page):
                         ntfy_sep,
                         current_monitor,
                         current_report
+                    ]
+                    ,
+                )
+            )
+        if page.route == "/ticketingsetup" or page.route == "/ticketingsetup":
+            # Internal Company Setup
+            ticket_private = ft.TextField(label="Private Key", hint_text="ex. https://ntfy.myserver.com/report")
+            ticket_public = ft.TextField(label="Public Key", hint_text="ex. https://ntfy.myserver.com/monitor")
+            ticket_clientid = ft.TextField(label="Client ID", hint_text="ex. https://ntfy.myserver.com/monitor")
+            ticket_company = ft.TextField(label="Company Name", hint_text="ex. https://ntfy.myserver.com/monitor")
+            ticket_domain = ft.TextField(label="Domain", hint_text="ex. https://ntfy.myserver.com/monitor")
+            # Ticket Setup
+            ticket_boardid = ft.TextField(label="Board ID", hint_text="ex. https://ntfy.myserver.com/monitor")
+            ticket_clientnumber = ft.TextField(label="Client Number", hint_text="ex. https://ntfy.myserver.com/monitor")
+
+            ticket_setup_row = ft.ResponsiveRow([
+                ft.Container(ticket_private, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ticket_public, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ticket_clientid, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ticket_company, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ticket_domain, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+            ])
+            client_setup_row = ft.ResponsiveRow([
+                ft.Container(ticket_boardid, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+                ft.Container(ticket_clientnumber, col={"sm": 3, "md": 4, "xl":4}, padding=5),
+            ])
+            ticket_info = ft.Text("Fill in info about your connectwise instance below")
+            client_info = ft.Text("Fill in info about your connectwise client below. Board to put tickets on, client to put tickets under")
+            ticket_text = Text("""
+            This is where you can setup ticketing. Currently only Connectwise Ticketing is integrated with options to inegrate with the APIs they offer. It requires a valid Company, Public key, Private Key, and domain. In addition you also need a valid clientid from connectwise directly. That must be requested from them. It's a pain honestly. Read their docs for more information.
+            """)
+            ticket_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[ticket_text])
+            # current_monitor_url, current_report_url = get_ntfy_urls()
+            # current_monitor = ft.Text(f'The monitor URL is set to: {current_monitor_url}', style=ft.TextThemeStyle.BODY_MEDIUM, size=32)
+            # current_report = ft.Text(f'The Report URL is set to: {current_report_url}', style=ft.TextThemeStyle.BODY_MEDIUM, size=32)
+            # ntfy_sep = ft.Card(content=ft.Container(Text("Current ntfy server Settings", weight="bold", style=ft.TextThemeStyle.BODY_MEDIUM, size=25), padding=8, expand=True))
+            page.views.append(
+                View(
+                    "/ntfysettings",
+                    [
+                        AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
+                        actions=[theme_icon_button], ),
+                        ticket_row,
+                        ticket_info,
+                        ticket_setup_row,
+                        client_info,
+                        client_setup_row,
+                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_cw(page, ticket_company.value, ticket_public.value, ticket_private.value, ticket_domain.value, ticket_clientid.value, ticket_boardid.value, ticket_clientnumber.value))])
+
                     ]
                     ,
                 )
@@ -415,23 +761,111 @@ def main(page: Page):
                 ],
             )
 
+            wfc_configs = load_wfc_configs(config_location)
+            wfc_table_rows = []
+
+            for wfc_config in wfc_configs:
+                windows_name = wfc_config['windows_name']
+                windows_domain = wfc_config['windows_domain']
+                windows_user = wfc_config['windows_user']
+                windows_pass = wfc_config['windows_pass']
+                windows_file_path = wfc_config['windows_file_path']
+                windows_cron = wfc_config['windows_cron']
+                windows_check_frequency = wfc_config['windows_check_frequency']
+
+                row = ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text(windows_name)),
+                        ft.DataCell(ft.Text(windows_domain)),
+                        ft.DataCell(ft.Text(windows_user)),
+                        ft.DataCell(ft.Text(windows_pass)),
+                        ft.DataCell(ft.Text(windows_file_path)),
+                        ft.DataCell(ft.Text(windows_cron)),
+                        ft.DataCell(ft.Text(windows_check_frequency)),
+                    ],
+                    # Add any necessary on_select_changed or other event handlers here
+                    on_select_changed=(
+                        lambda user_modules_copy: 
+                            lambda x: user_modules_copy.delete_wfc_config()
+                    )(user_modules)
+                )
+
+                wfc_table_rows.append(row)
+
+            wfc_table = ft.DataTable(
+                # Add desired styling options here
+                columns=[
+                    ft.DataColumn(ft.Text("Windows Name")),
+                    ft.DataColumn(ft.Text("Windows Domain")),
+                    ft.DataColumn(ft.Text("Windows User")),
+                    ft.DataColumn(ft.Text("Windows File Path")),
+                    ft.DataColumn(ft.Text("Windows Cron")),
+                    ft.DataColumn(ft.Text("Windows Check Frequency")),
+                ],
+                rows=wfc_table_rows
+            )
+
             def show_banner_click(e):
                 page.banner.open = True
                 page.update()
+            windows_name = ft.TextField(label="Name of system to monitor", hint_text="ex. WINDOWS-01")
+            windows_domain = ft.TextField(label="Domain Name", hint_text="ex. MYDOMAIN.LOCAL")
+            windows_user = ft.TextField(label="Username to login with", hint_text="ex. username")
+            windows_pass = ft.TextField(label="Password to login with", hint_text="ex. Password!", password=True, can_reveal_password=True)
+            windows_file_path = ft.TextField(label="Path of Folder to Monitor", hint_text="ex. \\\\TEST-DC01\\testfolder")
+            windows_cron = ft.TextField(label="How Often should the check job run? (In cron)", hint_text="0 0 * * *")
+            windows_check_frequency = ft.TextField(label="Freqency of update to folder (In hours)", hint_text="24")
+            submit_button = ft.ElevatedButton(text="Submit", on_click=lambda e: set_and_run_wfc(user_modules, e))
+
+            def set_and_run_wfc(user_modules, event):
+                user_modules.windows_name = windows_name.value
+                user_modules.windows_domain = windows_domain.value
+                user_modules.windows_user = windows_user.value
+                user_modules.windows_pass = windows_pass.value
+                user_modules.windows_file_path = windows_file_path.value
+                user_modules.windows_cron = windows_cron.value
+                user_modules.windows_check_frequency = windows_check_frequency.value
+
+                wfc_config = {
+                    'windows_name': windows_name.value,
+                    'windows_domain': windows_domain.value,
+                    'windows_user': windows_user.value,
+                    'windows_pass': windows_pass.value,
+                    'windows_file_path': windows_file_path.value,
+                    'windows_cron': windows_cron.value,
+                    'windows_check_frequency': windows_check_frequency.value,
+                }
+
+                save_wfc_config(config_location, wfc_config)
+
+                user_modules.setup_wfc()
+
+                user_modules.show_info_snackbar("Windows File Checker has been scheduled and setup!")
+                user_modules.page.update()
 
             wfc_help = ft.ElevatedButton("Help", on_click=show_banner_click)
-            page.views.append(
-                View(
-                    "/wfc",
-                    [
+            wfc_view = ft.View("/wfc", 
+                [
                         AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
                         actions=[theme_icon_button], ),
                     wfc_help,
-                    Text('Windows File Checker Setup page!')
-
-                    ],
-                )
+                    Text('Setup a new monitor on a windows system below - Results will appear here after scans kick off'),
+                    windows_name,
+                    windows_domain, 
+                    windows_user,
+                    windows_pass,
+                    windows_file_path,
+                    windows_cron,
+                    windows_check_frequency,
+                    submit_button,
+                    Text('Existing Windows File Checker Scans:'),
+                    wfc_table
+                    ]
             )
+            wfc_view.scroll = ft.ScrollMode.AUTO
+            page.views.append(
+                wfc_view
+                )
         if page.route == "/dockermon":
             page.views.append(
                 View(
@@ -546,8 +980,8 @@ def main(page: Page):
         page.update()
 
     def local_login(e):
-        if local_user_var == '3rt':
-            if local_pass_var == '3RTpass!':
+        if local_user_var == 'admin':
+            if local_pass_var == 'admin':
                 cecil_row.visible = False
                 login_row.visible = False
                 logout_row.visible = True
@@ -578,7 +1012,7 @@ def main(page: Page):
 
 
     page.on_login = on_login
-    local_login_button = ft.TextButton(text='Login Locally', on_click=reveal_local)
+    local_login_button = ft.ElevatedButton(text='Login Locally', on_click=reveal_local)
     local_text = ft.Text('Login Locally:')
     login_user = ft.TextField(label="Username", hint_text="ex. admin")
     login_pass = ft.TextField(label="Password", can_reveal_password=True, password=True, hint_text="ex. password1")
@@ -629,9 +1063,10 @@ def main(page: Page):
     linux_health_button = ElevatedButton("Linux Health Report", on_click=open_linuxhealth)
     Dynamic_ip_button = ElevatedButton("Dynamic IP Checker", on_click=open_dynamicip)
     ntfy_config_button = ElevatedButton("ntfy Setup", on_click=open_ntfy)
+    ticket_config_button = ElevatedButton("Ticketing Setup", on_click=open_ticketing)
     windows_file_check_button = ElevatedButton("Windows File Checker", on_click=open_wfc)
 
-    basic_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[ntfy_config_button])
+    basic_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[ntfy_config_button, ticket_config_button])
     alert_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[docker_monitor_button, Dynamic_ip_button, windows_file_check_button])
     report_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[dell_button, linux_health_button])
 
@@ -643,4 +1078,4 @@ def main(page: Page):
 # ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
 # ft.app(target=main)
 # App Version
-ft.app(target=main, port=8034)
+ft.app(target=main, port=8035)
