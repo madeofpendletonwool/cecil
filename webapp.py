@@ -97,6 +97,12 @@ def main(page: Page):
     )
     print(provider)
 
+#---Snackbar fucntionality----------------------------------------
+    def show_snackbar(page, message):
+        page.snack_bar = ft.SnackBar(ft.Text(message))
+        page.snack_bar.open = True
+        page.update()
+
 
 
 #---Creating Class for module creation---------------------------
@@ -325,6 +331,39 @@ def main(page: Page):
         with open(config_location, 'w') as file_handle:
             yaml.dump(config, file_handle)
 
+    def save_cw_config(page, ticket_company, public_key, private_key, domain, clientid, board_id, company_id):
+        cw_config = {
+            "ticket_company": ticket_company,
+            "public_key": public_key,
+            "private_key": private_key,
+            "domain": domain,
+            "clientid": clientid,
+            "board_id": str(board_id),
+            "company_id": str(company_id)
+        }
+
+        with open(config_location, 'r') as file_handle:
+            config = yaml.safe_load(file_handle)
+
+        if config is None:
+            config = {'config': {}}
+
+        if 'config' not in config:
+            config['config'] = {}
+        elif config['config'] is None:
+            config['config'] = {}
+
+        # Replaces the existing 'cw' configuration if it exists, otherwise creates a new one
+        config['config']['cw'] = [cw_config]
+
+        with open(config_location, 'w') as file_handle:
+            yaml.dump(config, file_handle)
+
+        message = "CW Ticket Config Saved!"
+        show_snackbar(page, message)
+
+
+
     def load_wfc_configs(config_location):
         with open(config_location, 'r') as file_handle:
             config = yaml.safe_load(file_handle)
@@ -517,19 +556,27 @@ def main(page: Page):
 
     def test_cw(page, ticket_company, public_key, private_key, domain, clientid, board_id, company_id):
         def close_dlg(e):
-            dlg_modal.open = False
+            ticket_dlg.open = False
             page.update()
 
         ticket_created = basic_modules.functions.create_ticket(ticket_company, public_key, private_key, domain, clientid, board_id, company_id)
+        # ticket_created = "test"
 
         ticket_dlg = ft.AlertDialog(
             title=ft.Text("Ticket Status"),
             content=ft.Text(ticket_created),
             actions=[
-            ft.TextButton("Save", on_click=close_dlg),
+            ft.TextButton("Save", on_click=lambda x: (save_cw_config(page, ticket_company, public_key, private_key, domain, clientid, board_id, company_id), close_dlg)),
             ft.TextButton("Close", on_click=close_dlg),
         ],
         )
+
+        def open_dlg(page):
+            page.dialog = ticket_dlg
+            ticket_dlg.open = True
+            page.update()
+
+        open_dlg(page)
 
 #---Code for Theme Change----------------------------------------------------------------
 
