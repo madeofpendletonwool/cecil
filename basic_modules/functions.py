@@ -40,5 +40,15 @@ def create_ticket(company, public_key, private_key, domain, clientid, board_id, 
         print(f"Error creating ticket: {response.content}")
         return f"Error creating ticket: {response.content}"
 
+def send_monitor_notification(ntfy_monitor, message, cw_ticket):
+    requests.post(ntfy_monitor, data=message.encode(encoding='utf-8'))
+
+    if cw_ticket:  # If cw_ticket is not empty
+        create_ticket(**cw_ticket)
+    
+def send_alert_notification(ntfy_alert, message):
+    requests.post(ntfy_alert, data=message.encode(encoding='utf-8'))
+
 if __name__ == "__main__":
     pass
+

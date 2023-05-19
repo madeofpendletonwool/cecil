@@ -17,7 +17,6 @@ import sys
 import shutil
 import datetime
 from datetime import datetime, timedelta
-import time
 import schedule
 import threading
 from croniter import croniter
@@ -59,27 +58,39 @@ if not os.path.exists(config_location):
 with open(config_location, 'r') as file:
     file_contents = file.read()
 
-# Get ntfy urls
-
-with open(config_location, 'r') as file:
-    config_data = yaml.safe_load(file)
-
-ntfy_monitor_url = config_data.get('ntfy_monitor_url', None)
-ntfy_report_url = config_data.get('ntfy_report_url', None)
-
-if ntfy_monitor_url:
-    print("ntfy_monitor_url:", ntfy_monitor_url)
-else:
-    print("ntfy_monitor_url not found in the config")
-
-if ntfy_report_url:
-    print("ntfy_report_url:", ntfy_report_url)
-else:
-    print("ntfy_report_url not found in the config")
-
-
 
 def main(page: Page):
+#---Snackbar fucntionality----------------------------------------
+    def show_snackbar(page, message):
+        page.snack_bar = ft.SnackBar(ft.Text(message))
+        page.snack_bar.open = True
+        page.update()
+
+    # Get ntfy urls
+
+    with open(config_location, 'r') as file:
+        config_data = yaml.safe_load(file)
+
+    ntfy_monitor_url = config_data.get('ntfy_monitor_url', None)
+    ntfy_report_url = config_data.get('ntfy_report_url', None)
+
+    if ntfy_monitor_url:
+        print("ntfy_monitor_url:", ntfy_monitor_url)
+    else:
+        print("ntfy_monitor_url not found in the config")
+        message = "ntfy_monitor_url not found in the config. Please Configure this in the ntfy Setup Module prior to using other modules."
+        show_snackbar(page, message)
+
+    if ntfy_report_url:
+        print("ntfy_report_url:", ntfy_report_url)
+    else:
+        print("ntfy_report_url not found in the config")
+        message = "ntfy_report_url not found in the config.  Please Configure this in the ntfy Setup Module prior to using other modules."
+        show_snackbar(page, message)
+
+
+
+
     print(f'Clientid in python {clientid}')
     print(f'client secret in python {clientsecret}')
     print(f'auth url in python {authurl}')
@@ -96,13 +107,6 @@ def main(page: Page):
         redirect_url=authurl,
     )
     print(provider)
-
-#---Snackbar fucntionality----------------------------------------
-    def show_snackbar(page, message):
-        page.snack_bar = ft.SnackBar(ft.Text(message))
-        page.snack_bar.open = True
-        page.update()
-
 
 
 #---Creating Class for module creation---------------------------
@@ -237,6 +241,8 @@ def main(page: Page):
 
             if conn is None:
                 print("Cannot perform the file check due to authentication failure")
+                message = "Cannot perform the file check due to authentication failure"
+                show_snackbar(page, message)
                 return
 
             # Check if any new files have been created in the specified folder within the last specified hours
@@ -277,7 +283,8 @@ def main(page: Page):
             else:
                 consolidated_message += "No new files found within the specified time period\n"
 
-            send_monitor_notification(ntfy_monitor_url, consolidated_message)
+            cw_config = load_cw_info()
+            send_monitor_notification(ntfy_monitor_url, consolidated_message, cw_ticket)
 
 
     user_modules = Module_Change(page, config_location)
@@ -310,6 +317,27 @@ def main(page: Page):
     def verify_config():
         if not os.path.exists(config_location):
             open(config_location, "w").close()
+
+    def load_cw_info():
+        # Load configuration from YAML file
+        with open(config_location, 'r') as file_handle:
+            config = yaml.safe_load(file_handle)
+        
+        # Extract CW configuration from the loaded config
+        cw_config = config.get('config', {}).get('cw', [])[0] if config.get('config', {}).get('cw') else {}
+
+        # Package the information into a dictionary
+        cw_ticket = {
+            'ticket_company': cw_config.get('ticket_company'),
+            'public_key': cw_config.get('public_key'),
+            'private_key': cw_config.get('private_key'),
+            'domain': cw_config.get('domain'),
+            'clientid': cw_config.get('clientid'),
+            'board_id': cw_config.get('board_id'),
+            'company_id': cw_config.get('company_id')
+        } if cw_config else {}
+
+        return cw_config
 
     def save_wfc_config(config_location, wfc_config):
         with open(config_location, 'r') as file_handle:
