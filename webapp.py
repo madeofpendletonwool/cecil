@@ -6,8 +6,8 @@ from flet.auth.providers.github_oauth_provider import GitHubOAuthProvider
 import time
 from dell_idrac_scan.test_idrac import test_idrac
 from basic_modules.test_nfty_urls import test_ntfy_urls
-from basic_modules.send_notification import send_monitor_notification
-from basic_modules.send_notification import send_alert_notification
+from basic_modules.functions import send_monitor_notification
+from basic_modules.functions import send_alert_notification
 import basic_modules.functions
 import basic_modules.test_nfty_urls
 import os
@@ -279,11 +279,18 @@ def main(page: Page):
             consolidated_message += "Cutoff time: " + cutoff_message + "\n\n"
 
             if new_files:
-                consolidated_message += "New files found:\n" + new_files_message + "\n"
+                ticket_summary = "New files found"
             else:
-                consolidated_message += "No new files found within the specified time period\n"
+                ticket_summary = "No new files found within the specified time period"
 
-            cw_config = load_cw_info()
+            cw_ticket = load_cw_info()
+
+            # Append the summary and content to the ticket only if the CW configuration is available
+            if cw_ticket:
+                cw_ticket['ticket_summary'] = ticket_summary
+                cw_ticket['ticket_content'] = consolidated_message
+
+
             send_monitor_notification(ntfy_monitor_url, consolidated_message, cw_ticket)
 
 
@@ -328,7 +335,7 @@ def main(page: Page):
 
         # Package the information into a dictionary
         cw_ticket = {
-            'ticket_company': cw_config.get('ticket_company'),
+            'company': cw_config.get('ticket_company'),  # Changed from 'ticket_company' to 'company'
             'public_key': cw_config.get('public_key'),
             'private_key': cw_config.get('private_key'),
             'domain': cw_config.get('domain'),
@@ -337,7 +344,8 @@ def main(page: Page):
             'company_id': cw_config.get('company_id')
         } if cw_config else {}
 
-        return cw_config
+        return cw_ticket
+
 
     def save_wfc_config(config_location, wfc_config):
         with open(config_location, 'r') as file_handle:
@@ -586,8 +594,10 @@ def main(page: Page):
         def close_dlg(e):
             ticket_dlg.open = False
             page.update()
+        ticket_summary = "This is a test ticket from Cecil!"
+        ticket_content = "Hi from Cecil!"
 
-        ticket_created = basic_modules.functions.create_ticket(ticket_company, public_key, private_key, domain, clientid, board_id, company_id)
+        ticket_created = basic_modules.functions.create_ticket(ticket_company, public_key, private_key, domain, clientid, board_id, company_id, ticket_summary, ticket_content)
         # ticket_created = "test"
 
         ticket_dlg = ft.AlertDialog(
