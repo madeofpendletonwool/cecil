@@ -6,12 +6,14 @@ services:
     tty: true
     environment:
       # ID and Secret for Github Authentication
-      - CLIENT_ID={{ Github_ClientID }}
-      - CLIENT_SECRET={{ Github_Secret }}
+      - CLIENT_ID=${AUTH_CLIENT_ID}
+      - CLIENT_SECRET=${AUTH_CLIENT_SECRET}
+      # - AUTH_URL=${AUTH_URL}
+      - CONFIG_LOCATION=${CONFIG_PATH}
       # The auth URL is the url that you are using to connect to the app. This is required so the auth token is directed to the right location. Use the url that you use for cecil plus '/api/oauth/redirect' at the end. 
       - AUTH_URL="http://localhost:38355/api/oauth/redirect"
     ports:
       - 38355:38355
     volumes:
-      - ~/cecil/config:/opt/cecil
+      - ${CONFIG_PATH}:/opt/cecil
     restart: always
