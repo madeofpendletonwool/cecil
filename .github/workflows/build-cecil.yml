@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Cecil Docker Build
 
 on:
   push:
@@ -56,5 +56,5 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: latest
           labels: ${{ steps.meta.outputs.labels }}
