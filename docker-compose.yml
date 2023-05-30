@@ -1,7 +1,7 @@
 version: '3'
 services:
   cecil:
-    image: madeofpendletonwool/cecil:latest
+    image: madeofpendletonwool/cecil:main
     container_name: cecil
     tty: true
     environment:
