@@ -1160,7 +1160,7 @@ def main(page: Page):
     page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
 
 # Browser Version
-# ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
+ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
 # ft.app(target=main)
 # App Version
-ft.app(target=main, port=8035)
+# ft.app(target=main, port=8035)
