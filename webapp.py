@@ -23,17 +23,22 @@ from croniter import croniter
 import pytz
 
 if len(sys.argv) > 1:
-    clientid = sys.argv[1]
+    config_path = sys.argv[1]
+else:
+    config_path = '/home/cecil/'
+
+if len(sys.argv) > 2:
+    clientid = sys.argv[2]
 else:
     clientid = 'testing'
 
-if len(sys.argv) > 2:
-    clientsecret = sys.argv[2]
+if len(sys.argv) > 3:
+    clientsecret = sys.argv[3]
 else:
     clientsecret = 'testing'
 
-if len(sys.argv) > 3:
-    authurl = sys.argv[3]
+if len(sys.argv) > 4:
+    authurl = sys.argv[4]
 else:
     authurl = 'testing'
 
@@ -1223,7 +1228,7 @@ def main(page: Page):
     page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
 
 # Browser Version
-# ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
+ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
 # ft.app(target=main)
 # App Version
-ft.app(target=main, port=8035)
+# ft.app(target=main, port=8035)

@@ -4,6 +4,8 @@
 <img src="./images/Cecil-logos.jpeg">
 </p>
 
+![Latest Cecil Build](https://github.com/madeofpendletonwool/cecil/actions/workflows/build-cecil.yml/badge.svg)
+
 ## Welcome to Cecil
 
 Cecil is an ever growing notification platform that can be used for all notification needs (with the right modules implemented). It pairs perfectly with [ntfy](https://ntfy.sh/) - A fantastic program built to send and handle notifications at zero cost - and will assume you're using it throughout these instructions. You're welcome to implement your own notification service but you assume the upkeep with it. 
