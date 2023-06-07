@@ -270,28 +270,24 @@ def main(page: Page):
             cutoff_message = f"Cutoff time: {cutoff_time}"
             # send_monitor_notification(ntfy_monitor_url, file_list_message)
 
-            # Check if any files have been modified within the specified time period
-            new_files = [f for f in files if f.filename not in ['.', '..'] and datetime.fromtimestamp(f.last_attr_change_time) > cutoff_time]  # Ignore . and .. files
+            # Check if any files have NOT been modified within the specified time period
+            no_new_files = [f for f in files if f.filename not in ['.', '..'] and datetime.fromtimestamp(f.last_attr_change_time) <= cutoff_time]  # Ignore . and .. files
 
             # Consolidate messages into a single string
             consolidated_message = f"File check for {self.windows_file_path}:\n\n"
-            consolidated_message += "All files in the shared folder:\n" + file_list_message + "\n"
+            consolidated_message += f"No new files created within the last {check_frequency} hours. All files in the shared folder:\n" + file_list_message + "\n"
             consolidated_message += "Cutoff time: " + cutoff_message + "\n\n"
 
-            if new_files:
-                ticket_summary = "New files found"
-            else:
+            if no_new_files:
                 ticket_summary = "No new files found within the specified time period"
+                cw_ticket = load_cw_info()
 
-            cw_ticket = load_cw_info()
+                # Append the summary and content to the ticket only if the CW configuration is available
+                if cw_ticket:
+                    cw_ticket['ticket_summary'] = ticket_summary
+                    cw_ticket['ticket_content'] = consolidated_message
 
-            # Append the summary and content to the ticket only if the CW configuration is available
-            if cw_ticket:
-                cw_ticket['ticket_summary'] = ticket_summary
-                cw_ticket['ticket_content'] = consolidated_message
-
-
-            send_monitor_notification(ntfy_monitor_url, consolidated_message, cw_ticket)
+                send_monitor_notification(ntfy_monitor_url, consolidated_message, cw_ticket)
 
 
     user_modules = Module_Change(page, config_location)
@@ -325,11 +321,25 @@ def main(page: Page):
         if not os.path.exists(config_location):
             open(config_location, "w").close()
 
-    def load_cw_info():
-        # Load configuration from YAML file
+    def load_cw_config(config_location):
         with open(config_location, 'r') as file_handle:
             config = yaml.safe_load(file_handle)
+            
+        cw_config_list = config.get('config', {}).get('cw', [])
+        if not isinstance(cw_config_list, list):
+            cw_config_list = [cw_config_list]
         
+        # Select only the required keys from the CW config
+        filtered_cw_configs = [
+            {key: cw_config[key] for key in ('board_id', 'company_id', 'domain', 'public_key', 'ticket_company') if key in cw_config}
+            for cw_config in cw_config_list
+        ]
+        
+        return filtered_cw_configs
+
+    def load_cw_info():
+        with open(config_location, 'r') as file_handle:
+            config = yaml.safe_load(file_handle)
         # Extract CW configuration from the loaded config
         cw_config = config.get('config', {}).get('cw', [])[0] if config.get('config', {}).get('cw') else {}
 
@@ -398,6 +408,16 @@ def main(page: Page):
         message = "CW Ticket Config Saved!"
         show_snackbar(page, message)
 
+    def get_cw_config(config_location):
+        with open(config_location, 'r') as file_handle:
+            config = yaml.safe_load(file_handle)
+
+        if config is None or config.get('config') is None:
+            print(f"No 'config' section found in the configuration file at {config_location}")
+            return []
+                
+        wfc_configs = config['config'].get('wfc', [])
+        return wfc_configs
 
 
     def load_wfc_configs(config_location):
@@ -709,6 +729,48 @@ def main(page: Page):
                 )
             )
         if page.route == "/ticketingsetup" or page.route == "/ticketingsetup":
+            # Get current ticketing settings
+            cw_configs = load_cw_config(config_location)
+
+            cw_table_rows = []
+
+            for cw_config in cw_configs:
+                board_id = cw_config['board_id']
+                domain = cw_config['domain']
+                company_id = cw_config['company_id']
+                public_key = cw_config['public_key']
+                ticket_company = cw_config['ticket_company']
+                
+                print(f"Board ID: {board_id}, Domain: {domain}, Company ID: {company_id}, Public Key: {public_key}, Ticket Company: {ticket_company}")
+
+                row = ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text(ticket_company)),
+                        ft.DataCell(ft.Text(domain)),
+                        ft.DataCell(ft.Text(company_id)),
+                        ft.DataCell(ft.Text(board_id)),
+                        ft.DataCell(ft.Text(public_key))
+                    ],
+                    # Add any necessary on_select_changed or other event handlers here
+                    on_select_changed=(
+                        lambda user_modules_copy: 
+                            lambda x: user_modules_copy.delete_wfc_config()
+                    )(user_modules)
+                )
+
+                cw_table_rows.append(row)
+
+            cw_table = ft.DataTable(
+                # Add desired styling options here
+                columns=[
+                    ft.DataColumn(ft.Text("Ticket Company")),
+                    ft.DataColumn(ft.Text("Domain")),
+                    ft.DataColumn(ft.Text("Company ID")),
+                    ft.DataColumn(ft.Text("Board ID")),
+                    ft.DataColumn(ft.Text("Public Key"))
+                ],
+                rows=cw_table_rows
+            )
             # Internal Company Setup
             ticket_private = ft.TextField(label="Private Key", hint_text="ex. https://ntfy.myserver.com/report")
             ticket_public = ft.TextField(label="Public Key", hint_text="ex. https://ntfy.myserver.com/monitor")
@@ -751,8 +813,9 @@ def main(page: Page):
                         ticket_setup_row,
                         client_info,
                         client_setup_row,
-                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_cw(page, ticket_company.value, ticket_public.value, ticket_private.value, ticket_domain.value, ticket_clientid.value, ticket_boardid.value, ticket_clientnumber.value))])
-
+                        Row([ft.ElevatedButton(text="Test", on_click=lambda x: test_cw(page, ticket_company.value, ticket_public.value, ticket_private.value, ticket_domain.value, ticket_clientid.value, ticket_boardid.value, ticket_clientnumber.value))]),
+                        ft.Text("Current Ticketing Settings", weight="bold", style=ft.TextThemeStyle.BODY_MEDIUM, size=18),
+                        cw_table
                     ]
                     ,
                 )
@@ -943,7 +1006,7 @@ def main(page: Page):
                     windows_cron,
                     windows_check_frequency,
                     submit_button,
-                    Text('Existing Windows File Checker Scans:'),
+                    Text('Existing Windows File Checker Scans:', weight="bold", style=ft.TextThemeStyle.BODY_MEDIUM, size=18),
                     wfc_table
                     ]
             )
