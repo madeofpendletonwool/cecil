@@ -8,6 +8,7 @@ from dell_idrac_scan.test_idrac import test_idrac
 from basic_modules.test_nfty_urls import test_ntfy_urls
 from basic_modules.functions import send_monitor_notification
 from basic_modules.functions import send_alert_notification
+from cryptography.fernet import Fernet
 import basic_modules.functions
 import basic_modules.test_nfty_urls
 import os
@@ -41,6 +42,13 @@ if len(sys.argv) > 4:
     authurl = sys.argv[4]
 else:
     authurl = 'testing'
+
+if len(sys.argv) > 5:
+    encryption_key = sys.argv[5]
+else:
+    encryption_key = 'testing'
+
+cipher_suite = Fernet(encryption_key)
 
 if clientid == False:
     clientid = 'testing'
@@ -348,13 +356,20 @@ def main(page: Page):
         # Extract CW configuration from the loaded config
         cw_config = config.get('config', {}).get('cw', [])[0] if config.get('config', {}).get('cw') else {}
 
+        private_key_encrypted = cw_config.get('private_key').encode()  # If it's not already bytes
+        private_key_decrypted = cipher_suite.decrypt(private_key_encrypted).decode()  # Decodes to string
+
+        clientid_encrypted = cw_config.get('clientid').encode()  # If it's not already bytes
+        clientid_decrypted = cipher_suite.decrypt(clientid_encrypted).decode()  # Decodes to string
+
+
         # Package the information into a dictionary
         cw_ticket = {
-            'company': cw_config.get('ticket_company'),  # Changed from 'ticket_company' to 'company'
+            'company': cw_config.get('ticket_company'),
             'public_key': cw_config.get('public_key'),
-            'private_key': cw_config.get('private_key'),
+            'private_key': private_key_decrypted,
             'domain': cw_config.get('domain'),
-            'clientid': cw_config.get('clientid'),
+            'clientid': clientid_decrypted,
             'board_id': cw_config.get('board_id'),
             'company_id': cw_config.get('company_id')
         } if cw_config else {}
@@ -383,12 +398,14 @@ def main(page: Page):
             yaml.dump(config, file_handle)
 
     def save_cw_config(page, ticket_company, public_key, private_key, domain, clientid, board_id, company_id):
+        en_private_key = cipher_suite.encrypt(private_key)
+        en_clientid = cipher_suite.encrypt(clientid)
         cw_config = {
             "ticket_company": ticket_company,
             "public_key": public_key,
-            "private_key": private_key,
+            "private_key": en_private_key,
             "domain": domain,
-            "clientid": clientid,
+            "clientid": en_clientid,
             "board_id": str(board_id),
             "company_id": str(company_id)
         }
@@ -622,7 +639,7 @@ def main(page: Page):
         ticket_summary = "This is a test ticket from Cecil!"
         ticket_content = "Hi from Cecil!"
 
-        ticket_created = basic_modules.functions.create_ticket(ticket_company, public_key, private_key, domain, clientid, board_id, company_id, ticket_summary, ticket_content)
+        ticket_created = basic_modules.functions.create_ticket(ticket_company, public_key, private_key, domain, clientid, board_id, company_id, ticket_summary, ticket_content, encryption_key)
         # ticket_created = "test"
 
         ticket_dlg = ft.AlertDialog(

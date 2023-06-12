@@ -1,8 +1,9 @@
 import requests
 import json
 import base64
+from cryptography.fernet import Fernet
 
-def create_ticket(company, public_key, private_key, domain, clientid, board_id, company_id, ticket_summary, ticket_content):
+def create_ticket(company, public_key, private_key, domain, clientid, board_id, company_id, ticket_summary, ticket_content, encryption_key):
     # Define the API endpoint
     endpoint = f"https://{domain}/v4_6_release/apis/3.0/service/tickets/"
 
