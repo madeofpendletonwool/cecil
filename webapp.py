@@ -368,7 +368,7 @@ def main(page: Page):
     def load_cw_config(config_location):
         with open(config_location, 'r') as file_handle:
             config = yaml.safe_load(file_handle)
-            
+        print(config)  
         if config is None:
             print(f"No valid configuration found at {config_location}")
             return []
