@@ -53,6 +53,16 @@ parser.add_argument('ENCRYPTION_KEY',
                     type=str,
                     help='the encryption key')
 
+parser.add_argument('USERNAME',
+                    metavar='username',
+                    type=str,
+                    help='the username')
+
+parser.add_argument('PASSWORD',
+                    metavar='password',
+                    type=str,
+                    help='the password')
+
 # Execute parse_args()
 args = parser.parse_args()
 
@@ -62,6 +72,9 @@ clientid = args.CLIENT_ID or 'testing'
 clientsecret = args.CLIENT_SECRET or 'testing'
 authurl = args.AUTH_URL or 'testing'
 encryption_key = args.ENCRYPTION_KEY or 'testing'
+username = args.USERNAME or 'cecil'
+password = args.PASSWORD or 'cecil'
+
 
 
 cipher_suite = Fernet(encryption_key)
