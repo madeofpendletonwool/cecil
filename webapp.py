@@ -1037,7 +1037,7 @@ def main(page: Page):
                 user_modules.windows_name = windows_name.value
                 user_modules.windows_domain = windows_domain.value
                 user_modules.windows_user = windows_user.value
-                user_modules.windows_pass = cipher_suite.encrypt(windows_pass.value.encode("utf-8"))  # Encrypt the password
+                user_modules.windows_pass = windows_pass.value
                 user_modules.windows_file_path = windows_file_path.value
                 user_modules.windows_cron = windows_cron.value
                 user_modules.windows_check_frequency = windows_check_frequency.value
@@ -1046,7 +1046,7 @@ def main(page: Page):
                     'windows_name': windows_name.value,
                     'windows_domain': windows_domain.value,
                     'windows_user': windows_user.value,
-                    'windows_pass': user_modules.windows_pass.value,
+                    'windows_pass': cipher_suite.encrypt(windows_pass.value.encode("utf-8")),  # Encrypt the password
                     'windows_file_path': windows_file_path.value,
                     'windows_cron': windows_cron.value,
                     'windows_check_frequency': windows_check_frequency.value,
