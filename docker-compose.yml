@@ -22,6 +22,9 @@ services:
       #   print(Fernet.generate_key())
       # Drop the output key indo the encryption_key var below
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      # Local Login creds
+      - USERNAME=${USERNAME}
+      - PASSWORD=${PASSWORD}
     ports:
       - 38355:38355
     volumes:
