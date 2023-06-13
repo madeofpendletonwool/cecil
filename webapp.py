@@ -487,9 +487,17 @@ def main(page: Page):
         if config is None or config.get('config') is None:
             print(f"No 'config' section found in the configuration file at {config_location}")
             return []
-                
+                    
         wfc_configs = config['config'].get('wfc', [])
+
+        # Decrypt the windows_pass in each configuration
+        for wfc_config in wfc_configs:
+            encrypted_pass = wfc_config.get('windows_pass')
+            if encrypted_pass:
+                wfc_config['windows_pass'] = cipher_suite.decrypt(encrypted_pass).decode('utf-8')
+
         return wfc_configs
+
 
 
     wfc_configs = load_wfc_configs(config_location)
@@ -1029,7 +1037,7 @@ def main(page: Page):
                 user_modules.windows_name = windows_name.value
                 user_modules.windows_domain = windows_domain.value
                 user_modules.windows_user = windows_user.value
-                user_modules.windows_pass = windows_pass.value
+                user_modules.windows_pass = cipher_suite.encrypt(windows_pass.value.encode("utf-8"))  # Encrypt the password
                 user_modules.windows_file_path = windows_file_path.value
                 user_modules.windows_cron = windows_cron.value
                 user_modules.windows_check_frequency = windows_check_frequency.value
@@ -1038,7 +1046,7 @@ def main(page: Page):
                     'windows_name': windows_name.value,
                     'windows_domain': windows_domain.value,
                     'windows_user': windows_user.value,
-                    'windows_pass': windows_pass.value,
+                    'windows_pass': user_modules.windows_pass.value,
                     'windows_file_path': windows_file_path.value,
                     'windows_cron': windows_cron.value,
                     'windows_check_frequency': windows_check_frequency.value,
