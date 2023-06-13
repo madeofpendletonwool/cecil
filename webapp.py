@@ -368,22 +368,23 @@ def main(page: Page):
     def load_cw_config(config_location):
         with open(config_location, 'r') as file_handle:
             config = yaml.safe_load(file_handle)
-            
+
         if config is None or config.get('config') is None:
             print(f"No valid configuration found at {config_location}")
             return []
-                
+
         cw_config_list = config.get('config', {}).get('cw', [])
         if not isinstance(cw_config_list, list):
             cw_config_list = [cw_config_list]
-            
+
         # Select only the required keys from the CW config
         filtered_cw_configs = [
-            {key: cw_config[key] for key in ('board_id', 'company_id', 'domain', 'public_key', 'ticket_company') if key in cw_config}
+            {key: cw_config[key] if not isinstance(cw_config[key], bytes) else cw_config[key].decode() for key in ('board_id', 'company_id', 'domain', 'public_key', 'ticket_company') if key in cw_config}
             for cw_config in cw_config_list
         ]
-        
+
         return filtered_cw_configs
+
 
 
 
