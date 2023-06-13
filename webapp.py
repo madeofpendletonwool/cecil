@@ -22,31 +22,47 @@ import schedule
 import threading
 from croniter import croniter
 import pytz
+import argparse
 
-if len(sys.argv) > 1:
-    config_path = sys.argv[1]
-else:
-    config_path = '/home/cecil/'
+# Create the parser
+parser = argparse.ArgumentParser(description='Python webapp startup')
 
-if len(sys.argv) > 2:
-    clientid = sys.argv[2]
-else:
-    clientid = 'testing'
+# Add the arguments
+parser.add_argument('CONFIG_PATH',
+                    metavar='config_path',
+                    type=str,
+                    help='the path to configuration')
 
-if len(sys.argv) > 3:
-    clientsecret = sys.argv[3]
-else:
-    clientsecret = 'testing'
+parser.add_argument('CLIENT_ID',
+                    metavar='client_id',
+                    type=str,
+                    help='the client id')
 
-if len(sys.argv) > 4:
-    authurl = sys.argv[4]
-else:
-    authurl = 'testing'
+parser.add_argument('CLIENT_SECRET',
+                    metavar='client_secret',
+                    type=str,
+                    help='the client secret')
 
-if len(sys.argv) > 5:
-    encryption_key = sys.argv[5]
-else:
-    encryption_key = 'testing'
+parser.add_argument('AUTH_URL',
+                    metavar='auth_url',
+                    type=str,
+                    help='the authentication url')
+
+parser.add_argument('ENCRYPTION_KEY',
+                    metavar='encryption_key',
+                    type=str,
+                    help='the encryption key')
+
+# Execute parse_args()
+args = parser.parse_args()
+
+# You can access the values with args.<name>, for example:
+config_path = args.CONFIG_PATH or '/home/cecil/'
+clientid = args.CLIENT_ID or 'testing'
+clientsecret = args.CLIENT_SECRET or 'testing'
+authurl = args.AUTH_URL or 'testing'
+encryption_key = args.ENCRYPTION_KEY or 'testing'
+
 
 cipher_suite = Fernet(encryption_key)
 
@@ -1150,8 +1166,8 @@ def main(page: Page):
         page.update()
 
     def local_login(e):
-        if local_user_var == 'admin':
-            if local_pass_var == 'admin':
+        if local_user_var == username:
+            if local_pass_var == password:
                 cecil_row.visible = False
                 login_row.visible = False
                 logout_row.visible = True

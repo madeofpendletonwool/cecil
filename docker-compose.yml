@@ -9,7 +9,7 @@ services:
       - CLIENT_ID=${AUTH_CLIENT_ID}
       - CLIENT_SECRET=${AUTH_CLIENT_SECRET}
       # - AUTH_URL=${AUTH_URL}
-      - CONFIG_LOCATION=${CONFIG_PATH}
+      - CONFIG_PATH=${CONFIG_PATH}
       # The auth URL is the url that you are using to connect to the app. This is required so the auth token is directed to the right location. Use the url that you use for cecil plus '/api/oauth/redirect' at the end. 
       - AUTH_URL=${AUTH_URL}
       # The encryption key for password and secure data storage. We store this here because it's intended to be an environment variable. The key should be fernet compatible and you should generate it. Here's an example of how to do it.
@@ -21,7 +21,7 @@ services:
       # Generate the key
       #   print(Fernet.generate_key())
       # Drop the output key indo the encryption_key var below
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY=${AUTH_URL}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
     ports:
       - 38355:38355
     volumes:
