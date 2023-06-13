@@ -435,8 +435,8 @@ def main(page: Page):
             yaml.dump(config, file_handle)
 
     def save_cw_config(page, ticket_company, public_key, private_key, domain, clientid, board_id, company_id):
-        en_private_key = cipher_suite.encrypt(private_key)
-        en_clientid = cipher_suite.encrypt(clientid)
+        en_private_key = cipher_suite.encrypt(private_key.encode("utf-8"))
+        en_clientid = cipher_suite.encrypt(clientid.encode("utf-8"))
         cw_config = {
             "ticket_company": ticket_company,
             "public_key": public_key,
@@ -466,6 +466,7 @@ def main(page: Page):
 
         message = "CW Ticket Config Saved!"
         show_snackbar(page, message)
+
 
     def get_cw_config(config_location):
         with open(config_location, 'r') as file_handle:
