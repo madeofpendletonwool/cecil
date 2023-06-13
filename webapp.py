@@ -391,28 +391,37 @@ def main(page: Page):
     def load_cw_info():
         with open(config_location, 'r') as file_handle:
             config = yaml.safe_load(file_handle)
+            
         # Extract CW configuration from the loaded config
         cw_config = config.get('config', {}).get('cw', [])[0] if config.get('config', {}).get('cw') else {}
 
-        private_key_encrypted = cw_config.get('private_key').encode()  # If it's not already bytes
-        private_key_decrypted = cipher_suite.decrypt(private_key_encrypted).decode()  # Decodes to string
+        if cw_config:
+            # If 'private_key' and 'clientid' are present, encode and decrypt them
+            if 'private_key' in cw_config and 'clientid' in cw_config:
+                private_key_encrypted = cw_config.get('private_key').encode()  # If it's not already bytes
+                private_key_decrypted = cipher_suite.decrypt(private_key_encrypted).decode()  # Decodes to string
 
-        clientid_encrypted = cw_config.get('clientid').encode()  # If it's not already bytes
-        clientid_decrypted = cipher_suite.decrypt(clientid_encrypted).decode()  # Decodes to string
+                clientid_encrypted = cw_config.get('clientid').encode()  # If it's not already bytes
+                clientid_decrypted = cipher_suite.decrypt(clientid_encrypted).decode()  # Decodes to string
+            else:
+                print("'private_key' and/or 'clientid' not found in CW configuration.")
+                return {}
 
+            # Package the information into a dictionary
+            cw_ticket = {
+                'company': cw_config.get('ticket_company'),
+                'public_key': cw_config.get('public_key'),
+                'private_key': private_key_decrypted,
+                'domain': cw_config.get('domain'),
+                'clientid': clientid_decrypted,
+                'board_id': cw_config.get('board_id'),
+                'company_id': cw_config.get('company_id')
+            }
+            return cw_ticket
+        else:
+            print("No CW configuration found.")
+            return {}
 
-        # Package the information into a dictionary
-        cw_ticket = {
-            'company': cw_config.get('ticket_company'),
-            'public_key': cw_config.get('public_key'),
-            'private_key': private_key_decrypted,
-            'domain': cw_config.get('domain'),
-            'clientid': clientid_decrypted,
-            'board_id': cw_config.get('board_id'),
-            'company_id': cw_config.get('company_id')
-        } if cw_config else {}
-
-        return cw_ticket
 
 
     def save_wfc_config(config_location, wfc_config):
