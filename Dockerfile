@@ -15,6 +15,11 @@ RUN apt update && \
 ADD ./requirements.txt /
 RUN pip install -r ./requirements.txt
 # Put cecil Files in place
+
+# Add a cache-busting build argument
+ARG CACHEBUST=1
+
+
 # Create structure for cecil
 RUN git clone https://github.com/madeofpendletonwool/cecil.git /opt/ceciltemp && \
     mkdir -p /opt/cecil/ && \
