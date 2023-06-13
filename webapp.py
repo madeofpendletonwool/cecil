@@ -28,37 +28,37 @@ import argparse
 parser = argparse.ArgumentParser(description='Python webapp startup')
 
 # Add the arguments
-parser.add_argument('CONFIG_PATH',
+parser.add_argument('--config_path',
                     metavar='config_path',
                     type=str,
                     help='the path to configuration')
 
-parser.add_argument('CLIENT_ID',
+parser.add_argument('--client_id',
                     metavar='client_id',
                     type=str,
                     help='the client id')
 
-parser.add_argument('CLIENT_SECRET',
+parser.add_argument('--client_secret',
                     metavar='client_secret',
                     type=str,
                     help='the client secret')
 
-parser.add_argument('AUTH_URL',
+parser.add_argument('--auth_url',
                     metavar='auth_url',
                     type=str,
                     help='the authentication url')
 
-parser.add_argument('ENCRYPTION_KEY',
+parser.add_argument('--encryption_key',
                     metavar='encryption_key',
                     type=str,
                     help='the encryption key')
 
-parser.add_argument('USERNAME',
+parser.add_argument('--username',
                     metavar='username',
                     type=str,
                     help='the username')
 
-parser.add_argument('PASSWORD',
+parser.add_argument('--password',
                     metavar='password',
                     type=str,
                     help='the password')
