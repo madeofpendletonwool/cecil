@@ -67,13 +67,14 @@ parser.add_argument('--password',
 args = parser.parse_args()
 
 # You can access the values with args.<name>, for example:
-config_path = args.CONFIG_PATH or '/home/cecil/'
-clientid = args.CLIENT_ID or 'testing'
-clientsecret = args.CLIENT_SECRET or 'testing'
-authurl = args.AUTH_URL or 'testing'
-encryption_key = args.ENCRYPTION_KEY or 'testing'
-username = args.USERNAME or 'cecil'
-password = args.PASSWORD or 'cecil'
+config_path = args.config_path or '/home/cecil/'
+clientid = args.client_id or 'testing'
+clientsecret = args.client_secret or 'testing'
+authurl = args.auth_url or 'testing'
+encryption_key = args.encryption_key or 'testing'
+username = args.username or 'cecil'
+password = args.password or 'cecil'
+
 
 
 
