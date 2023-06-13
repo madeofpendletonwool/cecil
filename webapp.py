@@ -78,7 +78,8 @@ password = args.password or 'cecil'
 
 
 
-cipher_suite = Fernet(encryption_key)
+cipher_suite = Fernet(encryption_key.encode())
+
 
 if clientid == False:
     clientid = 'testing'
