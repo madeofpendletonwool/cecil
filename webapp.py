@@ -369,6 +369,10 @@ def main(page: Page):
         with open(config_location, 'r') as file_handle:
             config = yaml.safe_load(file_handle)
             
+        if config is None:
+            print(f"No valid configuration found at {config_location}")
+            return []
+            
         cw_config_list = config.get('config', {}).get('cw', [])
         if not isinstance(cw_config_list, list):
             cw_config_list = [cw_config_list]
@@ -380,6 +384,7 @@ def main(page: Page):
         ]
         
         return filtered_cw_configs
+
 
     def load_cw_info():
         with open(config_location, 'r') as file_handle:

@@ -20,7 +20,7 @@ services:
       #   from cryptography.fernet import Fernet
       # Generate the key
       #   print(Fernet.generate_key())
-      # Drop the output key indo the encryption_key var below
+      # Drop the output key WITHOUT THE BYTE LITERAL into the encryption_key var below. The python file will encode it so you don't need to do that. You're variable would look something like this - ENCRYPTION_KEY=dWNbuPfghfghhBhUFpMcq2D09sdfsdf7o21IMidPCvIXc=
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       # Local Login creds
       - USERNAME=${USERNAME}
