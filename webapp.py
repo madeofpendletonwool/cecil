@@ -8,6 +8,7 @@ from dell_idrac_scan.test_idrac import test_idrac
 from basic_modules.test_nfty_urls import test_ntfy_urls
 from basic_modules.functions import send_monitor_notification
 from basic_modules.functions import send_alert_notification
+from cryptography.fernet import Fernet
 import basic_modules.functions
 import basic_modules.test_nfty_urls
 import os
@@ -21,26 +22,64 @@ import schedule
 import threading
 from croniter import croniter
 import pytz
+import argparse
 
-if len(sys.argv) > 1:
-    config_path = sys.argv[1]
-else:
-    config_path = '/home/cecil/'
+# Create the parser
+parser = argparse.ArgumentParser(description='Python webapp startup')
 
-if len(sys.argv) > 2:
-    clientid = sys.argv[2]
-else:
-    clientid = 'testing'
+# Add the arguments
+parser.add_argument('--config_path',
+                    metavar='config_path',
+                    type=str,
+                    help='the path to configuration')
 
-if len(sys.argv) > 3:
-    clientsecret = sys.argv[3]
-else:
-    clientsecret = 'testing'
+parser.add_argument('--client_id',
+                    metavar='client_id',
+                    type=str,
+                    help='the client id')
 
-if len(sys.argv) > 4:
-    authurl = sys.argv[4]
-else:
-    authurl = 'testing'
+parser.add_argument('--client_secret',
+                    metavar='client_secret',
+                    type=str,
+                    help='the client secret')
+
+parser.add_argument('--auth_url',
+                    metavar='auth_url',
+                    type=str,
+                    help='the authentication url')
+
+parser.add_argument('--encryption_key',
+                    metavar='encryption_key',
+                    type=str,
+                    help='the encryption key')
+
+parser.add_argument('--username',
+                    metavar='username',
+                    type=str,
+                    help='the username')
+
+parser.add_argument('--password',
+                    metavar='password',
+                    type=str,
+                    help='the password')
+
+# Execute parse_args()
+args = parser.parse_args()
+
+# You can access the values with args.<name>, for example:
+config_path = args.config_path or '/home/cecil/'
+clientid = args.client_id or 'testing'
+clientsecret = args.client_secret or 'testing'
+authurl = args.auth_url or 'testing'
+encryption_key = args.encryption_key or 'testing'
+username = args.username or 'cecil'
+password = args.password or 'cecil'
+
+
+
+
+cipher_suite = Fernet(encryption_key.encode())
+
 
 if clientid == False:
     clientid = 'testing'
@@ -329,37 +368,60 @@ def main(page: Page):
     def load_cw_config(config_location):
         with open(config_location, 'r') as file_handle:
             config = yaml.safe_load(file_handle)
-            
+
+        if config is None or config.get('config') is None:
+            print(f"No valid configuration found at {config_location}")
+            return []
+
         cw_config_list = config.get('config', {}).get('cw', [])
         if not isinstance(cw_config_list, list):
             cw_config_list = [cw_config_list]
-        
+
         # Select only the required keys from the CW config
         filtered_cw_configs = [
-            {key: cw_config[key] for key in ('board_id', 'company_id', 'domain', 'public_key', 'ticket_company') if key in cw_config}
+            {key: cw_config[key] if not isinstance(cw_config[key], bytes) else cw_config[key].decode() for key in ('board_id', 'company_id', 'domain', 'public_key', 'ticket_company') if key in cw_config}
             for cw_config in cw_config_list
         ]
-        
+
         return filtered_cw_configs
+
+
+
 
     def load_cw_info():
         with open(config_location, 'r') as file_handle:
             config = yaml.safe_load(file_handle)
+            
         # Extract CW configuration from the loaded config
         cw_config = config.get('config', {}).get('cw', [])[0] if config.get('config', {}).get('cw') else {}
 
-        # Package the information into a dictionary
-        cw_ticket = {
-            'company': cw_config.get('ticket_company'),  # Changed from 'ticket_company' to 'company'
-            'public_key': cw_config.get('public_key'),
-            'private_key': cw_config.get('private_key'),
-            'domain': cw_config.get('domain'),
-            'clientid': cw_config.get('clientid'),
-            'board_id': cw_config.get('board_id'),
-            'company_id': cw_config.get('company_id')
-        } if cw_config else {}
+        if cw_config:
+            # If 'private_key' and 'clientid' are present, encode and decrypt them
+            if 'private_key' in cw_config and 'clientid' in cw_config:
+                private_key_encrypted = cw_config.get('private_key').encode()  # If it's not already bytes
+                private_key_decrypted = cipher_suite.decrypt(private_key_encrypted).decode()  # Decodes to string
 
-        return cw_ticket
+                clientid_encrypted = cw_config.get('clientid').encode()  # If it's not already bytes
+                clientid_decrypted = cipher_suite.decrypt(clientid_encrypted).decode()  # Decodes to string
+            else:
+                print("'private_key' and/or 'clientid' not found in CW configuration.")
+                return {}
+
+            # Package the information into a dictionary
+            cw_ticket = {
+                'company': cw_config.get('ticket_company'),
+                'public_key': cw_config.get('public_key'),
+                'private_key': private_key_decrypted,
+                'domain': cw_config.get('domain'),
+                'clientid': clientid_decrypted,
+                'board_id': cw_config.get('board_id'),
+                'company_id': cw_config.get('company_id')
+            }
+            return cw_ticket
+        else:
+            print("No CW configuration found.")
+            return {}
+
 
 
     def save_wfc_config(config_location, wfc_config):
@@ -383,12 +445,14 @@ def main(page: Page):
             yaml.dump(config, file_handle)
 
     def save_cw_config(page, ticket_company, public_key, private_key, domain, clientid, board_id, company_id):
+        en_private_key = cipher_suite.encrypt(private_key.encode("utf-8"))
+        en_clientid = cipher_suite.encrypt(clientid.encode("utf-8"))
         cw_config = {
             "ticket_company": ticket_company,
             "public_key": public_key,
-            "private_key": private_key,
+            "private_key": en_private_key,
             "domain": domain,
-            "clientid": clientid,
+            "clientid": en_clientid,
             "board_id": str(board_id),
             "company_id": str(company_id)
         }
@@ -413,6 +477,7 @@ def main(page: Page):
         message = "CW Ticket Config Saved!"
         show_snackbar(page, message)
 
+
     def get_cw_config(config_location):
         with open(config_location, 'r') as file_handle:
             config = yaml.safe_load(file_handle)
@@ -432,9 +497,17 @@ def main(page: Page):
         if config is None or config.get('config') is None:
             print(f"No 'config' section found in the configuration file at {config_location}")
             return []
-                
+                    
         wfc_configs = config['config'].get('wfc', [])
+
+        # Decrypt the windows_pass in each configuration
+        for wfc_config in wfc_configs:
+            encrypted_pass = wfc_config.get('windows_pass')
+            if encrypted_pass:
+                wfc_config['windows_pass'] = cipher_suite.decrypt(encrypted_pass).decode('utf-8')
+
         return wfc_configs
+
 
 
     wfc_configs = load_wfc_configs(config_location)
@@ -622,7 +695,7 @@ def main(page: Page):
         ticket_summary = "This is a test ticket from Cecil!"
         ticket_content = "Hi from Cecil!"
 
-        ticket_created = basic_modules.functions.create_ticket(ticket_company, public_key, private_key, domain, clientid, board_id, company_id, ticket_summary, ticket_content)
+        ticket_created = basic_modules.functions.create_ticket(ticket_company, public_key, private_key, domain, clientid, board_id, company_id, ticket_summary, ticket_content, encryption_key)
         # ticket_created = "test"
 
         ticket_dlg = ft.AlertDialog(
@@ -983,7 +1056,7 @@ def main(page: Page):
                     'windows_name': windows_name.value,
                     'windows_domain': windows_domain.value,
                     'windows_user': windows_user.value,
-                    'windows_pass': windows_pass.value,
+                    'windows_pass': cipher_suite.encrypt(windows_pass.value.encode("utf-8")),  # Encrypt the password
                     'windows_file_path': windows_file_path.value,
                     'windows_cron': windows_cron.value,
                     'windows_check_frequency': windows_check_frequency.value,
@@ -1133,8 +1206,8 @@ def main(page: Page):
         page.update()
 
     def local_login(e):
-        if local_user_var == 'admin':
-            if local_pass_var == 'admin':
+        if local_user_var == username:
+            if local_pass_var == password:
                 cecil_row.visible = False
                 login_row.visible = False
                 logout_row.visible = True
