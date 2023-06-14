@@ -34,7 +34,7 @@ def create_ticket(company, public_key, private_key, domain, clientid, board_id, 
     }
     response = requests.post(endpoint, data=json_data, headers=headers)
 
-    Check the response status code
+    # Check the response status code
     if response.status_code == 201:
         print("Ticket created successfully!")
         return "Ticket created successfully! Check your board to ensure it's there, then hit save to save these settings."
