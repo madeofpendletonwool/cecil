@@ -3,6 +3,7 @@ services:
   cecil:
     image: madeofpendletonwool/cecil:main
     container_name: cecil
+    env_file: env_file
     tty: true
     environment:
       # ID and Secret for Github Authentication
