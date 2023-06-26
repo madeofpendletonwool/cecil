@@ -8,6 +8,6 @@ services:
     ports:
       - 38355:38355
     volumes:
-      - /~/cecil2:/opt/cecil
+      - /home/collinp/cecil2:/opt/cecil
     restart: always
 

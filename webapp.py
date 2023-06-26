@@ -620,7 +620,7 @@ def main(page: Page):
 
     def test_idrac_button(ip, user, password):
         return_value = test_idrac(ip.value, user.value, password.value)
-        # print(return_value)
+        print(return_value)
         page.go("/idractest")
         # print(idrac_ip.value)
         # test_idrac(idrac_ip.value, idrac_user.value, idrac_pass.value)
