@@ -618,12 +618,43 @@ def main(page: Page):
         dlg_modal.open = True
         page.update()
 
-    def test_idrac_button(ip, user, password):
-        return_value = test_idrac(ip.value, user.value, password.value)
-        print(return_value)
-        page.go("/idractest")
-        # print(idrac_ip.value)
-        # test_idrac(idrac_ip.value, idrac_user.value, idrac_pass.value)
+    class Idrac:
+        def __int__(self):
+            self.idrac_host=None
+            self.idrac_user=None
+            self.idrac_pass=None
+        def test_idrac_button(self, ip, user, password):
+
+            self.idrac_host = ip.value
+            self.idrac_user = user.value
+            self.idrac_pass = password.value
+
+            return_value = test_idrac(self.idrac_host, self.idrac_user, self.idrac_pass)
+
+
+            def close_idrac_test_dlg(e):
+                validate_idrac_dlg.open = False
+                page.update()
+
+            validate_idrac_dlg = ft.AlertDialog(
+                modal=True,
+                title=ft.Text(f"iDrac Test Results:"),
+                content=ft.Column(controls=[
+                    #     ft.Text(f"Setup MFA:", selectable=True),
+                    ft.Text(f'{return_value}', selectable=True),
+                    # ], tight=True),
+
+                    # actions=[
+                    mfa_validate_select_row
+                ],
+                    tight=True),
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+
+            print(return_value)
+            page.go("/idractest")
+            # print(idrac_ip.value)
+            # test_idrac(idrac_ip.value, idrac_user.value, idrac_pass.value)
 
     def adjust_ipscan_status(e):
         time.sleep(1)

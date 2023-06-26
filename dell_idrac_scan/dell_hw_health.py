@@ -26,6 +26,8 @@ from datetime import datetime
 import logging
 import os
 
+controller_list = []
+
 requests.packages.urllib3.disable_warnings()
 
 logger = logging.getLogger('dell_hw_health')
@@ -92,13 +94,18 @@ def get_system_information():
 def get_memory_information():
     nagios_status = 0
     nagios_msg = ''
-    response = requests.get('https://%s%s/Memory' % (idrac_ip, ENDPOINT),
-                            verify=False,
-                            auth=(idrac_username, idrac_password))
+    try:
+        response = requests.get('https://%s%s/Memory' % (idrac_ip, ENDPOINT),
+                                verify=False,
+                                auth=(idrac_username, idrac_password))
+    except requests.exceptions.RequestException as err:
+        logger.error(f"Memory information could not be retrieved: {err}")
+        return
+
     data = response.json()
     if response.status_code != 200:
         logger.error('FAIL, get command failed, error is: %s' % data)
-        sys.exit(2)
+        return  # change here
     for i in data[u'Members']:
         dimm = i[u'@odata.id'].split('/')[-1]
         try:
@@ -255,19 +262,22 @@ def get_ps_information():
                 status = get_status(data)
                 if (is_healthy(status) and args['critical']):
                     continue
-                message = 'Server %s %s %s %s PN %s: %s ' % (serverSN, ps,
-                                                             data[u'Manufacturer'],
-                                                             data[u'Model'],
-                                                             data[u'PartNumber'],
-                                                             status)
-                if args['nagios'] and not is_healthy(status):
+                if 'Manufacturer' in data:  # validate that the key exists
+                    message = 'Server %s %s %s %s PN %s: %s ' % (serverSN, ps,
+                                                                 data[u'Manufacturer'],
+                                                                 data[u'Model'],
+                                                                 data[u'PartNumber'],
+                                                                 status)
+                else:
+                    message = 'Server %s %s: %s ' % (serverSN, ps, status)
+            if args['nagios'] and not is_healthy(status):
                     if status == 'Unknown' and nagios_status != 2:
                         nagios_status = 3
                     else:
                         nagios_status = 2
                     nagios_msg += message
-                elif not args['nagios']:
-                    get_report_output(message)
+            elif not args['nagios']:
+                get_report_output(message)
     if args['nagios']:
         if nagios_status == 0:
             nagios_msg = 'PSU are OK'
@@ -278,13 +288,21 @@ def get_storage_controller_information(quiet=False):
     nagios_status = 0
     nagios_msg = ''
     global controller_list
-    response = requests.get('https://%s%s/Storage' % (idrac_ip, ENDPOINT),
-                            verify=False,
-                            auth=(idrac_username, idrac_password))
-    data = response.json()
-    if response.status_code != 200:
-        logger.error('FAIL, get command failed, error is: %s' % data)
-        sys.exit(2)
+    controller_list = []
+
+    try:
+        response = requests.get('https://%s%s/Storage' % (idrac_ip, ENDPOINT),
+                                verify=False,
+                                auth=(idrac_username, idrac_password))
+        data = response.json()
+        if response.status_code != 200:
+            raise ValueError("Failed to fetch data. Error: %s" % data)
+    except ValueError as e:
+        logger.error('FAIL, get command failed, error is: %s' % str(e))
+        return
+    except Exception as e:
+        logger.error('Unexpected error occurred: %s' % str(e))
+        return
     controller_list = []
     for i in data[u'Members']:
         controller_list.append(i[u'@odata.id'][46:])
@@ -539,3 +557,6 @@ if __name__ == '__main__':
         logger.warning('-a option is not enabled in nagios mode')
 
     send_report()
+
+# id __name__ == "__main__":
+#
