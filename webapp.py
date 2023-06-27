@@ -720,6 +720,10 @@ def main(page: Page):
             return current_status
 
     def test_cw(page, ticket_company, public_key, private_key, domain, clientid, board_id, company_id):
+
+        pr = ft.ProgressRing()
+        progress_stack = ft.Stack([pr], bottom=25, right=30, left=20, expand=True)
+        page.overlay.append(progress_stack)
         def close_dlg(e):
             ticket_dlg.open = False
             page.update()
@@ -743,6 +747,7 @@ def main(page: Page):
             ticket_dlg.open = True
             page.update()
 
+        page.overlay.remove(progress_stack)
         open_dlg(page)
 
 #---Code for Theme Change----------------------------------------------------------------
@@ -1035,10 +1040,9 @@ def main(page: Page):
                         ft.DataCell(ft.Text(windows_name)),
                         ft.DataCell(ft.Text(windows_domain)),
                         ft.DataCell(ft.Text(windows_user)),
-                        ft.DataCell(ft.Text(windows_pass)),
                         ft.DataCell(ft.Text(windows_file_path)),
                         ft.DataCell(ft.Text(windows_cron)),
-                        ft.DataCell(ft.Text(windows_check_frequency)),
+                        ft.DataCell(ft.Text(windows_check_frequency))
                     ],
                     # Add any necessary on_select_changed or other event handlers here
                     on_select_changed=(
