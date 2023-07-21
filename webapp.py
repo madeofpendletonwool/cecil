@@ -1311,7 +1311,7 @@ def main(page: Page):
     logout_button = ft.ElevatedButton("Logout", on_click=logout_button_click)
     
     # login_button = ft.ElevatedButton("Login with GitHub", on_click=login_click)
-    login_button_row = ft.Row(controls=[login_button, local_login_button])
+    login_button_row = ft.Row(controls=[local_login_button])
     login_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[login_button_row, banner_button])
     logout_row = Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[logout_button, banner_button])
     page.add(login_row, logout_row, local_row)
