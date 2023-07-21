@@ -749,12 +749,15 @@ def main(page: Page):
         def __init__(self, page):
             self.page = page
         
-    def return_vsphere_config():
+        def return_vsphere_config():
 
-        terraform_config_generation.functions.return_vsphere_config()
-    def return_vsphere_blank():
-        blank_location = terraform_config_generation.functions.return_vsphere_blank()
-        file_picker.save_file(blank_location)
+            terraform_config_generation.functions.return_vsphere_config()
+        def return_vsphere_blank():
+            blank_location = terraform_config_generation.functions.return_vsphere_blank()
+            file_picker.save_file(blank_location)
+            print('test')
+    
+    terraform_data = Terraform_Configs
 
 #---Code for Theme Change----------------------------------------------------------------
 
@@ -853,8 +856,8 @@ def main(page: Page):
             )
         if page.route == "/terraformconfig" or page.route == "/terraformconfig":
             terraform_vsphere_title = ft.Text("Terraform vsphere config", size=16)
-            terraform_vsphere_blank = ft.ElevatedButton(text="Vsphere Config Blank Download", on_click=lambda x: return_vsphere_blank())
-            terraform_vsphere_config = ft.ElevatedButton(text="Upload Terraform CSV", on_click=lambda x: return_vsphere_config())
+            terraform_vsphere_blank = ft.ElevatedButton(text="Vsphere Config Blank Download", on_click=lambda x: Terraform_Configs.return_vsphere_blank())
+            terraform_vsphere_config = ft.ElevatedButton(text="Upload Terraform CSV", on_click=lambda x: terraform_data.return_vsphere_config())
             terraform_vsphere_button_row = Row([terraform_vsphere_blank, terraform_vsphere_config])
             terraform_text = Text("""
             Use this page to generate config files needed for terraform.
@@ -1248,6 +1251,7 @@ def main(page: Page):
     def on_logout(e):
         toggle_login_session()
 
+    # def on_login(e: ft.LoginEvent):
     def on_login(e):
         print("Access token:", page.auth.token.access_token)
         print("User ID:", page.auth.user.id)

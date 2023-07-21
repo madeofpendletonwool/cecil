@@ -21,8 +21,9 @@ ARG CACHEBUST=1
 
 
 # Create structure for cecil
-RUN git clone -b terraform-vm https://github.com/madeofpendletonwool/cecil.git /opt/ceciltemp && \
-    mkdir -p /opt/cecil/ && \
+RUN mkdir -p /opt/ceciltemp
+COPY . /opt/ceciltemp
+RUN mkdir -p /opt/cecil/ && \
     chmod -R 755 /opt
 # Begin cecil Setup
 ADD startup.sh /
