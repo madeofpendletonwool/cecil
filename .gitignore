@@ -1,3 +1,6 @@
 __pycache__/ 
 config.yaml
 .env
+*/env_file
+env_file
+.idea/

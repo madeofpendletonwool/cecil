@@ -3,30 +3,11 @@ services:
   cecil:
     image: madeofpendletonwool/cecil:main
     container_name: cecil
+    env_file: env_file
     tty: true
-    environment:
-      # ID and Secret for Github Authentication
-      - CLIENT_ID=${AUTH_CLIENT_ID}
-      - CLIENT_SECRET=${AUTH_CLIENT_SECRET}
-      # - AUTH_URL=${AUTH_URL}
-      - CONFIG_PATH=${CONFIG_PATH}
-      # The auth URL is the url that you are using to connect to the app. This is required so the auth token is directed to the right location. Use the url that you use for cecil plus '/api/oauth/redirect' at the end. 
-      - AUTH_URL=${AUTH_URL}
-      # The encryption key for password and secure data storage. We store this here because it's intended to be an environment variable. The key should be fernet compatible and you should generate it. Here's an example of how to do it.
-      # Start python
-      # Install Fernet if it isn't already
-      #   pip install fernet
-      # Import it
-      #   from cryptography.fernet import Fernet
-      # Generate the key
-      #   print(Fernet.generate_key())
-      # Drop the output key WITHOUT THE BYTE LITERAL into the encryption_key var below. The python file will encode it so you don't need to do that. You're variable would look something like this - ENCRYPTION_KEY=dWNbuPfghfghhBhUFpMcq2D09sdfsdf7o21IMidPCvIXc=
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      # Local Login creds
-      - USERNAME=${USERNAME}
-      - PASSWORD=${PASSWORD}
     ports:
       - 38355:38355
     volumes:
-      - ${CONFIG_PATH}:/opt/cecil
+      - /home/collinp/cecil2:/opt/cecil
     restart: always
+

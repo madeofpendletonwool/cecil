@@ -618,12 +618,43 @@ def main(page: Page):
         dlg_modal.open = True
         page.update()
 
-    def test_idrac_button(ip, user, password):
-        return_value = test_idrac(ip.value, user.value, password.value)
-        # print(return_value)
-        page.go("/idractest")
-        # print(idrac_ip.value)
-        # test_idrac(idrac_ip.value, idrac_user.value, idrac_pass.value)
+    class Idrac:
+        def __int__(self):
+            self.idrac_host=None
+            self.idrac_user=None
+            self.idrac_pass=None
+        def test_idrac_button(self, ip, user, password):
+
+            self.idrac_host = ip.value
+            self.idrac_user = user.value
+            self.idrac_pass = password.value
+
+            return_value = test_idrac(self.idrac_host, self.idrac_user, self.idrac_pass)
+
+
+            def close_idrac_test_dlg(e):
+                validate_idrac_dlg.open = False
+                page.update()
+
+            validate_idrac_dlg = ft.AlertDialog(
+                modal=True,
+                title=ft.Text(f"iDrac Test Results:"),
+                content=ft.Column(controls=[
+                    #     ft.Text(f"Setup MFA:", selectable=True),
+                    ft.Text(f'{return_value}', selectable=True),
+                    # ], tight=True),
+
+                    # actions=[
+                    mfa_validate_select_row
+                ],
+                    tight=True),
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+
+            print(return_value)
+            page.go("/idractest")
+            # print(idrac_ip.value)
+            # test_idrac(idrac_ip.value, idrac_user.value, idrac_pass.value)
 
     def adjust_ipscan_status(e):
         time.sleep(1)
@@ -689,6 +720,10 @@ def main(page: Page):
             return current_status
 
     def test_cw(page, ticket_company, public_key, private_key, domain, clientid, board_id, company_id):
+
+        pr = ft.ProgressRing()
+        progress_stack = ft.Stack([pr], bottom=25, right=30, left=20, expand=True)
+        page.overlay.append(progress_stack)
         def close_dlg(e):
             ticket_dlg.open = False
             page.update()
@@ -712,6 +747,7 @@ def main(page: Page):
             ticket_dlg.open = True
             page.update()
 
+        page.overlay.remove(progress_stack)
         open_dlg(page)
 
 #---Code for Theme Change----------------------------------------------------------------
@@ -1004,10 +1040,9 @@ def main(page: Page):
                         ft.DataCell(ft.Text(windows_name)),
                         ft.DataCell(ft.Text(windows_domain)),
                         ft.DataCell(ft.Text(windows_user)),
-                        ft.DataCell(ft.Text(windows_pass)),
                         ft.DataCell(ft.Text(windows_file_path)),
                         ft.DataCell(ft.Text(windows_cron)),
-                        ft.DataCell(ft.Text(windows_check_frequency)),
+                        ft.DataCell(ft.Text(windows_check_frequency))
                     ],
                     # Add any necessary on_select_changed or other event handlers here
                     on_select_changed=(

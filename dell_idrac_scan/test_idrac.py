@@ -132,3 +132,7 @@ def test_idrac(ip, user, password):
         with open(current_path + '/idractest.txt', 'w') as f:
             f.write(str(errormsg))
         return errormsg
+
+if __name__ == "__main__":
+    test_value = test_idrac('192.168.2.75', 'root', 'pass')
+    print(test_value)
