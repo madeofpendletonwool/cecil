@@ -5,7 +5,6 @@ from flet import ControlEvent
 import time
 from dell_idrac_scan.test_idrac import test_idrac
 from basic_modules.test_nfty_urls import test_ntfy_urls
-from flet.auth.providers.github_oauth_provider import GitHubOAuthProvider
 from basic_modules.functions import send_monitor_notification
 from basic_modules.functions import send_alert_notification
 import terraform_config_generation.functions
@@ -1243,16 +1242,12 @@ def main(page: Page):
 
 #----Login Changes------------------------------------------------------------
 
-    def login_click(e):
-        page.login(provider)
-
     def logout_button_click(e):
         page.logout()
 
     def on_logout(e):
         toggle_login_session()
 
-    # def on_login(e: ft.LoginEvent):
     def on_login(e):
         print("Access token:", page.auth.token.access_token)
         print("User ID:", page.auth.user.id)
