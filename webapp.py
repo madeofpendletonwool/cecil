@@ -148,14 +148,6 @@ def main(page: Page):
         print("Inaccessible URL")
 
 
-    provider = GitHubOAuthProvider(
-        client_id=clientid,
-        client_secret=clientsecret,
-        redirect_url=authurl,
-    )
-    print(provider)
-
-
 #---Creating Class for module creation---------------------------
 
 
