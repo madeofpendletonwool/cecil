@@ -749,15 +749,21 @@ def main(page: Page):
         def __init__(self, page):
             self.page = page
         
-        def return_vsphere_config():
-
+        def return_vsphere_config(self):
+            terraform_csv_file = file_picker.pick_files(dialog_title='Upload Terraform CSV')
+            self.page.update()
+            upload_url = page.get_upload_url("/opt/ceciltemp/terraformtemplate.csv", 60)
+            print(terraform_csv_file)
+            file_picker.upload(upload_url)
             terraform_config_generation.functions.return_vsphere_config()
-        def return_vsphere_blank():
+            self.page.update()
+        def return_vsphere_blank(self):
             blank_location = terraform_config_generation.functions.return_vsphere_blank()
-            file_picker.save_file(blank_location)
+            file_picker.save_file(file_name=blank_location)
+            self.page.update()
             print('test')
     
-    terraform_data = Terraform_Configs
+    terraform_data = Terraform_Configs(page)
 
 #---Code for Theme Change----------------------------------------------------------------
 
@@ -855,8 +861,8 @@ def main(page: Page):
                 )
             )
         if page.route == "/terraformconfig" or page.route == "/terraformconfig":
-            terraform_vsphere_title = ft.Text("Terraform vsphere config", size=16)
-            terraform_vsphere_blank = ft.ElevatedButton(text="Vsphere Config Blank Download", on_click=lambda x: Terraform_Configs.return_vsphere_blank())
+            terraform_vsphere_title = ft.Text("Terraform vsphere config:", size=16)
+            terraform_vsphere_blank = ft.ElevatedButton(text="Vsphere Config Blank Download", on_click=lambda x: terraform_data.return_vsphere_blank())
             terraform_vsphere_config = ft.ElevatedButton(text="Upload Terraform CSV", on_click=lambda x: terraform_data.return_vsphere_config())
             terraform_vsphere_button_row = Row([terraform_vsphere_blank, terraform_vsphere_config])
             terraform_text = Text("""
@@ -1269,6 +1275,8 @@ def main(page: Page):
         alert_modules_row.visible = page.auth is not None
         monitor_row.visible = page.auth is not None
         report_modules_row.visible = page.auth is not None
+        utilities_modules_row.visible = page.auth is not None
+        utilities_text.visible = page.auth is not None
         page.update()
 
     def local_login(e):
@@ -1285,6 +1293,8 @@ def main(page: Page):
                 report_modules_row.visible = True
                 local_row.visible = False
                 local_submit.visible = False
+                utilities_modules_row.visible = True
+                utilities_text.visible = True
                 page.update()
 
 
@@ -1372,7 +1382,7 @@ def main(page: Page):
     page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row, utilities_row, utilities_modules_row)
 
 # Browser Version
-ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
+ft.app(target=main, view=ft.WEB_BROWSER, port=38355, upload_dir="/opt/ceciltemp")
 # ft.app(target=main)
 # App Version
 # ft.app(target=main, port=8035)

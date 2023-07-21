@@ -17,12 +17,9 @@ def main(page: Page):
             ", ".join(map(lambda f: f.name, e.files)) if e.files else "Cancelled!"
         )
         selected_files.update()
-        upload_url = page.get_upload_url(selected_files.value, 60)
-        pick_files_dialog.upload(upload_url)
 
     pick_files_dialog = FilePicker(on_result=pick_files_result)
     selected_files = Text()
-
 
     # Save file dialog
     def save_file_result(e: FilePickerResultEvent):
@@ -81,4 +78,4 @@ def main(page: Page):
     )
 
 
-flet.app(target=main, assets_dir="assets", upload_dir="assets/uploads")
+flet.app(target=main)
