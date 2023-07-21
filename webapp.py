@@ -8,6 +8,7 @@ from dell_idrac_scan.test_idrac import test_idrac
 from basic_modules.test_nfty_urls import test_ntfy_urls
 from basic_modules.functions import send_monitor_notification
 from basic_modules.functions import send_alert_notification
+import terraform_config_generation.functions
 from cryptography.fernet import Fernet
 import basic_modules.functions
 import basic_modules.test_nfty_urls
@@ -104,6 +105,9 @@ with open(config_location, 'r') as file:
 
 
 def main(page: Page):
+    file_picker = ft.FilePicker()
+    page.overlay.append(file_picker)
+    page.update()
 #---Snackbar fucntionality----------------------------------------
     def show_snackbar(page, message):
         page.snack_bar = ft.SnackBar(ft.Text(message))
@@ -750,6 +754,17 @@ def main(page: Page):
         page.overlay.remove(progress_stack)
         open_dlg(page)
 
+    class Terraform_Configs:
+        def __init__(self, page):
+            self.page = page
+        
+    def return_vsphere_config():
+
+        terraform_config_generation.functions.return_vsphere_config()
+    def return_vsphere_blank():
+        blank_location = terraform_config_generation.functions.return_vsphere_blank()
+        file_picker.save_file(blank_location)
+
 #---Code for Theme Change----------------------------------------------------------------
 
     def change_theme(e):
@@ -778,6 +793,9 @@ def main(page: Page):
         page.go("/ntfysettings")
     def open_ticketing(e):
         page.go("/ticketingsetup")
+
+    def open_terraform_config(e):
+        page.go("/terraformconfig")
 
     def open_idrac(e):
         page.go("/idrac")
@@ -838,6 +856,28 @@ def main(page: Page):
                         ntfy_sep,
                         current_monitor,
                         current_report
+                    ]
+                    ,
+                )
+            )
+        if page.route == "/terraformconfig" or page.route == "/terraformconfig":
+            terraform_vsphere_title = ft.Text("Terraform vsphere config", size=16)
+            terraform_vsphere_blank = ft.ElevatedButton(text="Vsphere Config Blank Download", on_click=lambda x: return_vsphere_blank())
+            terraform_vsphere_config = ft.ElevatedButton(text="Upload Terraform CSV", on_click=lambda x: return_vsphere_config())
+            terraform_vsphere_button_row = Row([terraform_vsphere_blank, terraform_vsphere_config])
+            terraform_text = Text("""
+            Use this page to generate config files needed for terraform.
+            """)
+            terraform_row = Row(alignment=ft.MainAxisAlignment.CENTER, wrap=True, controls=[terraform_text])
+            page.views.append(
+                View(
+                    "/ntfysettings",
+                    [
+                        AppBar(title=Text("Cecil - Alerting and Monitoring", color="white"), center_title=True, bgcolor="blue",
+                        actions=[theme_icon_button], ),
+                        terraform_row,
+                        terraform_vsphere_title,
+                        terraform_vsphere_button_row
                     ]
                     ,
                 )
@@ -1319,6 +1359,9 @@ def main(page: Page):
     monitor_text = ft.Text('Reports:', style=ft.TextThemeStyle.HEADLINE_MEDIUM)
     monitor_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[monitor_text])
 
+    utilities_text = ft.Text('Utilities:', style=ft.TextThemeStyle.HEADLINE_MEDIUM)
+    utilities_row = Row(alignment=ft.MainAxisAlignment.CENTER, controls=[utilities_text])
+
     dell_button = ElevatedButton("iDrac Server Health Report", on_click=open_idrac)
     docker_monitor_button = ElevatedButton("Docker Monitor", on_click=open_dockermon)
     linux_health_button = ElevatedButton("Linux Health Report", on_click=open_linuxhealth)
@@ -1326,14 +1369,16 @@ def main(page: Page):
     ntfy_config_button = ElevatedButton("ntfy Setup", on_click=open_ntfy)
     ticket_config_button = ElevatedButton("Ticketing Setup", on_click=open_ticketing)
     windows_file_check_button = ElevatedButton("Windows File Checker", on_click=open_wfc)
+    vsphere_terraform_button = ElevatedButton("Terraform Config Generation", on_click=open_terraform_config)
 
     basic_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[ntfy_config_button, ticket_config_button])
     alert_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[docker_monitor_button, Dynamic_ip_button, windows_file_check_button])
     report_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[dell_button, linux_health_button])
+    utilities_modules_row = ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[vsphere_terraform_button])
 
 
     toggle_login_session()
-    page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row)
+    page.add(cecil_row, basic_row, basic_modules_row, alert_row, alert_modules_row, monitor_row, report_modules_row, utilities_row, utilities_modules_row)
 
 # Browser Version
 ft.app(target=main, view=ft.WEB_BROWSER, port=38355)
