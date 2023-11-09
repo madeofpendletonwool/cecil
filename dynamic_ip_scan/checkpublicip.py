@@ -30,7 +30,7 @@ if ipconfigcheck == False:
 # Pull Current Known Public IP from config file that's always updated
 home_folder = os.path.expanduser('~')
 with open(f'{home_folder}/ntfy/checkpublicip.yaml') as f:
-    Current_IP_File = yaml.load(f, Loader=yaml.FullLoader)
+    Current_IP_File = yaml.load(f, yaml.SafeLoader)
 
 Current_IP = Current_IP_File['ipaddress'][0]['Current_IP']
 
